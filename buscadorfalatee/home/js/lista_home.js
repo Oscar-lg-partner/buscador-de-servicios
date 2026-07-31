@@ -216,7 +216,7 @@ function listar_datos_home() {
       '">' +
       '<div class="item-fila">' +
       '<div class="item-modelo-nombre">' +
-      item.Modelo_Tech_Name +
+      texto_antes_punto(item.Modelo_Tech_Name) +
       "</div>" +
       '<div class="item-renovacion">' +
       (item.con_renove
@@ -280,6 +280,14 @@ function listar_datos_home() {
 function texto(v) {
   if (v === null || v === undefined) return "";
   return String(v).trim();
+}
+
+/** Para pintar en home: F4J7TY1W.ABWQPES → F4J7TY1W */
+function texto_antes_punto(t) {
+  var s = String(t || "");
+  var i = s.indexOf(".");
+  if (i === -1) return s;
+  return s.substring(0, i);
 }
 
 function escapar(t) {
