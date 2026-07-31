@@ -20,3 +20,6 @@ sheets/
 
 # Cachés
 .cache/
+
+# Helper local de push (no subir)
+push.bat
