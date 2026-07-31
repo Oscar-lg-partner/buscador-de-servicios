@@ -69,7 +69,7 @@ function campo_det_producto(fila) {
  */
 function campo_det_pvp(fila) {
   if (!campo_det_mostrar_pvp(fila)) return "";
-  return formato_precio_euros_det(fila["PVP"]);
+  return formato_precio_euros_det(valor_bruto(fila, ["PVP"]));
 }
 
 function campo_det_mostrar_pvp(fila) {
@@ -96,13 +96,13 @@ function campo_det_servicio(fila) {
 function campo_det_precio_opp(fila) {
   /* Si Modelo Renove tiene valor ≠ 1 → no mostrar Precio OPP */
   if (campo_det_mostrar_pvp(fila)) return "";
-  return formato_precio_euros_det(fila["Precio de coste 2"]);
+  return formato_precio_euros_det(valor_bruto(fila, ["Precio de coste 2"]));
 }
 
 /** Precio (SearchDatabase): solo si Modelo Renove tiene valor ≠ 1. Formato: 1.099 € */
 function campo_det_precio(fila) {
   if (!campo_det_mostrar_pvp(fila)) return "";
-  return formato_precio_euros_det(fila["Precio"]);
+  return formato_precio_euros_det(valor_bruto(fila, ["Precio"]));
 }
 
 function campo_det_periodo(fila) {
@@ -154,7 +154,7 @@ function campo_det_sku_garantia(fila) {
 
 function campo_det_precio_garantia(fila) {
   if (campo_det_con_renove(fila)) return "";
-  return valor_escapado(fila, ["Precios"]);
+  return formato_precio_euros_det(valor_bruto(fila, ["Precios"]));
 }
 
 function campo_det_anio(fila) {
@@ -250,21 +250,116 @@ function texto_det(v) {
   return String(v).trim();
 }
 
-/** Entero redondeado + miles con punto + " €" → 1.099 € */
+/**
+ * Formato euros:
+ *   1.667 / 1.059 (miles mal leídos) → "1.667 €"
+ *   39.99 / "39,99"                   → "39,99 €"
+ */
 function formato_precio_euros_det(bruto) {
   if (bruto === null || bruto === undefined || bruto === "") return "";
-  var limpio = String(bruto).trim().replace(/\s/g, "").replace(/€/g, "");
-  /* Quitar puntos de miles y usar coma/punto decimal → número */
-  if (limpio.indexOf(",") >= 0 && limpio.indexOf(".") >= 0) {
-    limpio = limpio.replace(/\./g, "").replace(",", ".");
-  } else if (limpio.indexOf(",") >= 0) {
-    limpio = limpio.replace(",", ".");
-  }
-  var n = Number(limpio);
+  var n = parse_precio_numero_det(bruto);
   if (isNaN(n)) return escapar_det(texto_det(bruto));
+
+  /* Céntimos reales (1–2 decimales): 39,99 € */
+  if (precio_trae_centimos_det(bruto)) {
+    var fijo = Math.abs(n).toFixed(2).split(".");
+    var parteEntera = fijo[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    var signo = n < 0 ? "-" : "";
+    return escapar_det(signo + parteEntera + "," + fijo[1] + " €");
+  }
+
+  /* Entero + miles con punto */
   var entero = String(Math.round(n));
   var conMiles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return escapar_det(conMiles + " €");
+}
+
+/** true solo si el bruto trae 1–2 decimales (céntimos), no 3 (miles / ruido) */
+function precio_trae_centimos_det(bruto) {
+  var s;
+  if (typeof bruto === "number" && isFinite(bruto)) {
+    if (Math.abs(bruto - Math.round(bruto)) < 1e-9) return false;
+    s = String(bruto);
+    if (/e/i.test(s)) return false;
+  } else {
+    s = String(bruto).trim().replace(/\s/g, "").replace(/€/g, "");
+  }
+  var lastComma = s.lastIndexOf(",");
+  var lastDot = s.lastIndexOf(".");
+  var sepAt = Math.max(lastComma, lastDot);
+  if (sepAt < 0) return false;
+  var cola = s.slice(sepAt + 1).replace(/[^\d]/g, "");
+  return cola.length === 1 || cola.length === 2;
+}
+
+function parse_precio_numero_det(bruto) {
+  if (typeof bruto === "number" && isFinite(bruto)) {
+    if (Math.abs(bruto - Math.round(bruto)) < 1e-9) return Math.round(bruto);
+    /*
+     * Solo X.YYY con |X| < 10 → miles mal leídos (1.667 → 1667).
+     * NUNCA 1667.115 → eso ya es ~1667 €.
+     */
+    var textoNum = String(bruto);
+    if (/e/i.test(textoNum)) {
+      textoNum = bruto.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
+    }
+    var punto = textoNum.indexOf(".");
+    if (punto >= 0) {
+      var dec = textoNum.slice(punto + 1);
+      if (/^\d{3}$/.test(dec) && Math.abs(bruto) < 10) {
+        return Math.round(bruto * 1000);
+      }
+    }
+    return bruto;
+  }
+
+  var s = String(bruto).trim().replace(/\s/g, "").replace(/€/g, "");
+  if (!s) return NaN;
+
+  var lastComma = s.lastIndexOf(",");
+  var lastDot = s.lastIndexOf(".");
+
+  /* Ambos: el último es decimal (1.059,50 o 1,059.50) */
+  if (lastComma >= 0 && lastDot >= 0) {
+    if (lastComma > lastDot) {
+      s = s.replace(/\./g, "").replace(",", ".");
+    } else {
+      s = s.replace(/,/g, "");
+    }
+    return parse_precio_numero_det(Number(s));
+  }
+
+  /* Solo coma o solo punto */
+  if (lastComma >= 0 || lastDot >= 0) {
+    var sep = lastComma >= 0 ? "," : ".";
+    var parts = s.split(sep);
+    var cola = parts[parts.length - 1];
+    var izquierda = parts[0].replace(/[^\d-]/g, "");
+
+    /* 3 dígitos y parte entera corta → miles: 1.667 / 1,059 */
+    if (
+      /^\d{3}$/.test(cola) &&
+      parts.length === 2 &&
+      izquierda.replace("-", "").length <= 3
+    ) {
+      return Number(izquierda + cola);
+    }
+    /* Varios grupos de miles: 1.234.567 */
+    if (/^\d{3}$/.test(cola) && parts.length > 2) {
+      return Number(parts.join(""));
+    }
+    /* 1–2 dígitos → céntimos: 39,99 */
+    if (parts.length === 2 && /^\d{1,2}$/.test(cola)) {
+      return Number(izquierda + "." + cola);
+    }
+    /* 1667.115 → decimal real */
+    if (parts.length === 2 && /^\d+$/.test(cola)) {
+      return Number(izquierda + "." + cola);
+    }
+    return Number(s.replace(/[.,]/g, ""));
+  }
+
+  return Number(s);
 }
 
 function tiene_stock_det(valor) {
@@ -282,14 +377,25 @@ function escapar_det(t) {
     .replace(/"/g, "&quot;");
 }
 
-function valor_escapado(fila, claves) {
+/**
+ * Lee el primer valor no vacío (sin escapar).
+ * Sirve para precios: hay que formatear el bruto, no el HTML escapado.
+ */
+function valor_bruto(fila, claves) {
   var i;
   var valor;
   for (i = 0; i < claves.length; i++) {
     valor = fila[claves[i]];
     if (valor !== null && valor !== undefined && valor !== "") {
-      return escapar_det(texto_det(valor));
+      return valor;
     }
   }
   return "";
+}
+
+/** Misma lectura que valor_bruto + escape HTML */
+function valor_escapado(fila, claves) {
+  var valor = valor_bruto(fila, claves);
+  if (valor === "") return "";
+  return escapar_det(texto_det(valor));
 }
