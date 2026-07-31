@@ -1,0 +1,22 @@
+# Dependencias / entorno
+node_modules/
+.vercel/
+.env
+.env.*
+!.env.example
+
+# SO / editor
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Datos locales del Sheet (no subir Excel con usuarios/pass)
+sheets/
+*.xlsx
+*.xls
+*.csv
+
+# Cachés
+.cache/
