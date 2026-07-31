@@ -34,7 +34,7 @@ function crear_bolsa_datos() {
       Modelo_Tech_Name: campo_Modelo_Tech_Name(fila),
       modelo: campo_modelo(fila),
       resumen2: campo_resumen2(fila),
-      precio2: campo_precio2(fila),
+      precio_lista: campo_precio_lista(fila),
       con_renove: campo_con_renove(fila),
       renovacion: campo_renovacion(fila),
       anio: campo_anio(fila),
@@ -79,6 +79,25 @@ function campo_precio2(fila) {
   var valor = fila["Precio de coste 2"];
   if (valor === null || valor === undefined || valor === "") return "";
   return escapar(texto(valor));
+}
+
+/**
+ * Renove con valor ≠ "1" → columna Precio (SearchDatabase)
+ * Renove vacía o "1" → Precio de coste 2 (precio2)
+ */
+function campo_precio_lista(fila) {
+  if (campo_mostrar_precio_search(fila)) {
+    var valor = fila["Precio"];
+    if (valor === null || valor === undefined || valor === "") return "";
+    return escapar(texto(valor));
+  }
+  return campo_precio2(fila);
+}
+
+/** Igual que en detalles: Renove llena y distinta de "1" */
+function campo_mostrar_precio_search(fila) {
+  var renove = texto(leer_modelo_renove_home(fila));
+  return renove !== "" && renove !== "1";
 }
 
 /** true si Modelo Renove está LLENA */
@@ -240,7 +259,7 @@ function listar_datos_home() {
       item.resumen2 +
       "</span>" +
       '<span class="item-precio">' +
-      item.precio2 +
+      item.precio_lista +
       "</span>" +
       "</div>" +
       '<div class="item-meta-derecha">' +
