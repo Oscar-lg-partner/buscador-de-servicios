@@ -27,9 +27,11 @@ function crear_bolsa_detalle(techKey) {
       modelo: campo_det_modelo(fila),
       producto: campo_det_producto(fila),
       pvp: campo_det_pvp(fila),
+      modelo_renove: campo_det_modelo_renove(fila),
       sku: campo_det_sku(fila),
       servicio: campo_det_servicio(fila),
       precio_opp: campo_det_precio_opp(fila),
+      precio: campo_det_precio(fila),
       periodo: campo_det_periodo(fila),
       stock_estado: campo_det_stock_estado(fila),
       rango_prefijo: campo_det_rango_prefijo(fila),
@@ -63,15 +65,11 @@ function campo_det_producto(fila) {
 
 /**
  * PVP solo si Modelo Renove tiene valor y es distinto de "1".
- * Redondeo temporal a entero (luego mejoramos todos los precios).
+ * Formato: 1.667 €
  */
 function campo_det_pvp(fila) {
   if (!campo_det_mostrar_pvp(fila)) return "";
-  var bruto = fila["PVP"];
-  if (bruto === null || bruto === undefined || bruto === "") return "";
-  var n = Number(String(bruto).trim().replace(/\s/g, "").replace(",", "."));
-  if (isNaN(n)) return valor_escapado(fila, ["PVP"]);
-  return escapar_det(String(Math.round(n)));
+  return formato_precio_euros_det(fila["PVP"]);
 }
 
 function campo_det_mostrar_pvp(fila) {
@@ -79,7 +77,15 @@ function campo_det_mostrar_pvp(fila) {
   return renove !== "" && renove !== "1";
 }
 
+/** Modelo Renove: solo si tiene valor y es distinto de "1" */
+function campo_det_modelo_renove(fila) {
+  if (!campo_det_mostrar_pvp(fila)) return "";
+  return escapar_det(texto_det(leer_modelo_renove(fila)));
+}
+
 function campo_det_sku(fila) {
+  /* Si Modelo Renove tiene valor ≠ 1 → no mostrar SKU */
+  if (campo_det_mostrar_pvp(fila)) return "";
   return valor_escapado(fila, ["Referencia n 2", "SKU"]);
 }
 
@@ -88,7 +94,15 @@ function campo_det_servicio(fila) {
 }
 
 function campo_det_precio_opp(fila) {
-  return valor_escapado(fila, ["Precio de coste 2"]);
+  /* Si Modelo Renove tiene valor ≠ 1 → no mostrar Precio OPP */
+  if (campo_det_mostrar_pvp(fila)) return "";
+  return formato_precio_euros_det(fila["Precio de coste 2"]);
+}
+
+/** Precio (SearchDatabase): solo si Modelo Renove tiene valor ≠ 1. Formato: 1.099 € */
+function campo_det_precio(fila) {
+  if (!campo_det_mostrar_pvp(fila)) return "";
+  return formato_precio_euros_det(fila["Precio"]);
 }
 
 function campo_det_periodo(fila) {
@@ -106,6 +120,8 @@ function campo_det_stock_estado(fila) {
 }
 
 function campo_det_rango_prefijo(fila) {
+  /* Si Modelo Renove está LLENA → no mostrar Rango Prefijo */
+  if (campo_det_con_renove(fila)) return "";
   return valor_escapado(fila, ["Rango Prefijo"]);
 }
 
@@ -182,13 +198,17 @@ function pintar_detalle(bolsa, pos) {
 
   html += bloque_det("Modelo", item.modelo);
   html += bloque_det("Producto", item.producto);
-  /* PVP: solo si Modelo Renove tiene valor ≠ 1 (viene vacío del campo si no aplica) */
-  html += bloque_det("PVP", item.pvp ? item.pvp + " €" : "");
+  /* PVP + Modelo Renove: solo si Renove tiene valor ≠ 1 */
+  html += bloque_det("PVP", item.pvp);
+  html += bloque_det("Modelo Renove", item.modelo_renove);
   html += bloque_det("SKU", item.sku);
   html += bloque_det("Servicio", item.servicio);
+  /* Renove ≠ 1 → Precio (SearchDatabase); si no → Precio OPP */
   html += bloque_det("Precio OPP/Tarifa Plana Tranquilidad", item.precio_opp);
+  html += bloque_det("Precio", item.precio);
   html += bloque_det("Período ofrecimiento (años)", item.periodo);
   html += bloque_det("Stock Estado", item.stock_estado);
+  /* Rango Prefijo solo si Renove VACÍA (el campo ya viene vacío si está llena) */
   html += bloque_det("Rango Prefijo", item.rango_prefijo);
 
   /* Modelo Renove VACÍA → sí mostrar garantía/renovación (si tienen valor) */
@@ -228,6 +248,23 @@ function bloque_det(label, valor) {
 function texto_det(v) {
   if (v === null || v === undefined) return "";
   return String(v).trim();
+}
+
+/** Entero redondeado + miles con punto + " €" → 1.099 € */
+function formato_precio_euros_det(bruto) {
+  if (bruto === null || bruto === undefined || bruto === "") return "";
+  var limpio = String(bruto).trim().replace(/\s/g, "").replace(/€/g, "");
+  /* Quitar puntos de miles y usar coma/punto decimal → número */
+  if (limpio.indexOf(",") >= 0 && limpio.indexOf(".") >= 0) {
+    limpio = limpio.replace(/\./g, "").replace(",", ".");
+  } else if (limpio.indexOf(",") >= 0) {
+    limpio = limpio.replace(",", ".");
+  }
+  var n = Number(limpio);
+  if (isNaN(n)) return escapar_det(texto_det(bruto));
+  var entero = String(Math.round(n));
+  var conMiles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return escapar_det(conMiles + " €");
 }
 
 function tiene_stock_det(valor) {
