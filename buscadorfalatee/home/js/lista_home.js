@@ -263,7 +263,7 @@ function listar_datos_home() {
       "</span>" +
       "</div>" +
       '<div class="item-meta-derecha">' +
-      (item.stock
+      (item.con_stock
         ? '<span class="item-meta-icon item-stock" title="Stock: ' +
           item.stock +
           '" data-tip="Stock: ' +
