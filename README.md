@@ -1,4 +1,4 @@
-# Buscador FlatFee (LG)
+# Buscador de servicios (LG)
 
 Front estático (HTML + Bootstrap + JS) + backend en **Google Apps Script** (Sheet privado).
 
@@ -28,7 +28,7 @@ Abrir `http://127.0.0.1:5500/` → redirige al login.
 
 ## Deploy en Vercel
 
-1. Importar el repo `Oscar-lg-partner/buscador-flatfee`
+1. Importar el repo `Oscar-lg-partner/buscador-de-servicios`
 2. Framework preset: **Other** (estático)
 3. Root directory: `.` (raíz)
 4. Build command: (vacío)
@@ -42,7 +42,7 @@ URL de Apps Script: `js/config.js` → `appsScriptUrl`.
 index.html
 js/                 # config, api (JSONP), auth, datos
 css/
-buscadorfalatee/
+buscador-de-servicios/
   login/
   home/
   detalles/
