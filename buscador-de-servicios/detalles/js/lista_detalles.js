@@ -64,14 +64,14 @@ function campo_det_producto(fila) {
 }
 
 /**
- * PVP solo si Modelo Renove tiene valor y es distinto de "1".
+ * PVP si existe en el sheet (cualquier flujo: renove o resto).
  * Formato: 1.667 €
  */
 function campo_det_pvp(fila) {
-  if (!campo_det_mostrar_pvp(fila)) return "";
   return formato_precio_euros_det(valor_bruto(fila, ["PVP"]));
 }
 
+/** true si Modelo Renove tiene valor y es distinto de "1" (plan renove) */
 function campo_det_mostrar_pvp(fila) {
   var renove = texto_det(leer_modelo_renove(fila));
   return renove !== "" && renove !== "1";
@@ -198,7 +198,7 @@ function pintar_detalle(bolsa, pos) {
 
   html += bloque_det("Modelo", item.modelo);
   html += bloque_det("Producto", item.producto);
-  /* PVP + Modelo Renove: solo si Renove tiene valor ≠ 1 */
+  /* PVP si existe; Modelo Renove solo en plan renove (≠ 1) */
   html += bloque_det("PVP", item.pvp);
   html += bloque_det("Modelo Renove", item.modelo_renove);
   html += bloque_det("SKU", item.sku);
