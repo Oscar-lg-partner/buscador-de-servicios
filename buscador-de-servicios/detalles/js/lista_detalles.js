@@ -199,7 +199,7 @@ function pintar_detalle(bolsa, pos) {
   html += bloque_det("Modelo", item.modelo);
   html += bloque_det("Producto", item.producto);
   /* PVP si existe; Modelo Renove solo en plan renove (≠ 1) */
-  html += bloque_det("PVP producto", item.pvp);
+  html += bloque_det("PVP Producto", item.pvp);
   html += bloque_det("Modelo Renove", item.modelo_renove);
   html += bloque_det("SKU", item.sku);
   html += bloque_det("Servicio", item.servicio);
