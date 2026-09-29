@@ -203,8 +203,8 @@ function pintar_detalle(bolsa, pos) {
   html += bloque_det("Modelo Renove", item.modelo_renove);
   html += bloque_det("SKU", item.sku);
   html += bloque_det("Servicio", item.servicio);
-  /* Renove ≠ 1 → Precio (SearchDatabase); si no → Precio OPP */
-  html += bloque_det("Precio OPP/Tarifa Plana Tranquilidad", item.precio_opp);
+  /* Renove ≠ 1 → Precio (SearchDatabase); si no → Precio OPP cambio nombre Precio OPP/Tarifa Plana Tranquilidad*/
+  html += bloque_det("Precio", item.precio_opp);
   html += bloque_det("Precio", item.precio);
   html += bloque_det("Período ofrecimiento (años)", item.periodo);
   html += bloque_det("Stock Estado", item.stock_estado);
