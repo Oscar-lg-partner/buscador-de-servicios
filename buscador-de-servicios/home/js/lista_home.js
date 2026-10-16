@@ -37,12 +37,14 @@ function crear_bolsa_datos() {
       precio_lista: campo_precio_lista(fila),
       con_renove: campo_con_renove(fila),
       renovacion: campo_renovacion(fila),
+      renovaciones_valor: campo_renovaciones_valor(fila),
       anio: campo_anio(fila),
       stock: campo_stock(fila),
       stock_raw: texto(fila["Stock"]),
       con_stock: campo_con_stock(fila),
       cp: campo_cp(fila, skusCp),
       precios: campo_precios(fila),
+      texto_busqueda: campo_texto_busqueda(fila, skusCp),
     });
 
     contadores[techKey] = contadores[techKey] + 1;
@@ -133,6 +135,15 @@ function campo_renovacion(fila) {
   return escapar(texto(valor));
 }
 
+/**
+ * Para el filtro de renovación (no se pinta; no lleva escapar).
+ * Número de Renovaciones solo si Modelo Renove está VACÍA; si no, "".
+ */
+function campo_renovaciones_valor(fila) {
+  if (campo_con_renove(fila)) return "";
+  return texto(fila["Renovaciones"]);
+}
+
 /** Año debajo de renovación — siempre se muestra si hay valor */
 function campo_anio(fila) {
   var valor = fila["Año"];
@@ -168,6 +179,34 @@ function campo_precios(fila) {
   return escapar(texto(valor));
 }
 
+/**
+ * Para el buscador (no se pinta; no lleva escapar).
+ * Junta SOLO lo que se ve en la tarjeta (incluidos los tooltips),
+ * con las mismas reglas que los campos de arriba.
+ */
+function campo_texto_busqueda(fila, skusCp) {
+  var partes = [];
+  var renove = texto(leer_modelo_renove_home(fila));
+  var conRenove = renove !== "";
+  var anio = texto(fila["Año"]) || texto(fila["Ano"]);
+
+  partes.push(texto(fila["Modelo (Tech. Name)"]));
+  partes.push(texto(fila["Model"]));
+  partes.push(texto(fila["Resumen 2"]));
+  partes.push(
+    renove !== "" && renove !== "1"
+      ? texto(fila["Precio"])
+      : texto(fila["Precio de coste 2"])
+  );
+  partes.push(conRenove ? "Sin renovación" : texto(fila["Renovaciones"]));
+  partes.push(anio);
+  if (campo_con_stock(fila)) partes.push(texto(fila["Stock"]));
+  if (campo_cp(fila, skusCp)) partes.push("CP");
+  if (!conRenove) partes.push(texto(fila["Precios"]));
+
+  return normalizar_busqueda(partes.join("|"));
+}
+
 /** Para el filtro (no se pinta; no lleva escapar) */
 function campo_con_stock(fila) {
   return tiene_stock(fila["Stock"]);
@@ -181,9 +220,18 @@ function tiene_stock(valor) {
 }
 
 ///////SOLO PARA BUSCADOR/////////////////
+/* Bolsa ya calculada: solo se rehace si llegan datos nuevos (login / Actualizar) */
+var bolsa_home_cache = null;
+var bolsa_home_fuente = null;
+
 /* Alias: el buscador / home ya llaman datos_necesarios() */
 function datos_necesarios() {
-  return crear_bolsa_datos();
+  var filas = leerDatos();
+  if (!bolsa_home_cache || bolsa_home_fuente !== filas) {
+    bolsa_home_cache = crear_bolsa_datos();
+    bolsa_home_fuente = filas;
+  }
+  return bolsa_home_cache;
 }
 
 /* =========================================================

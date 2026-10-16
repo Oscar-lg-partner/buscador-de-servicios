@@ -45,7 +45,7 @@
               type="search"
               class="form-control search-input"
               id="input-buscar"
-              placeholder="Buscar modelo..."
+              placeholder="Buscar modelo, año, precio, servicio..."
               autocomplete="off"
             />
             <button
@@ -93,6 +93,22 @@
             Stock Estado
             <i class="bi bi-chevron-right text-muted"></i>
           </button>
+          <button
+            type="button"
+            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 border-bottom rounded-0 px-3 py-3"
+            id="btn-filtro-renovacion"
+          >
+            Renovación
+            <i class="bi bi-chevron-right text-muted"></i>
+          </button>
+          <button
+            type="button"
+            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 border-bottom rounded-0 px-3 py-3"
+            id="btn-filtro-cp"
+          >
+            CP
+            <i class="bi bi-chevron-right text-muted"></i>
+          </button>
         </div>
         <div id="vista-filtro-stock" class="d-none px-3 py-3">
           <div class="form-check mb-3">
@@ -102,6 +118,32 @@
           <div class="form-check mb-3">
             <input class="form-check-input" type="checkbox" id="chk-sin-stock" />
             <label class="form-check-label" for="chk-sin-stock">Sin Stock</label>
+          </div>
+        </div>
+        <div id="vista-filtro-renovacion" class="d-none px-3 py-3">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="chk-con-renovacion" />
+            <label class="form-check-label" for="chk-con-renovacion">Con renovación</label>
+          </div>
+          <div class="mb-3 ps-4">
+            <label class="form-label small text-muted mb-1" for="sel-renovacion-num">Nº de renovación</label>
+            <select class="form-select form-select-sm" id="sel-renovacion-num">
+              <option value="">Todas</option>
+            </select>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="chk-sin-renovacion" />
+            <label class="form-check-label" for="chk-sin-renovacion">Sin renovación</label>
+          </div>
+        </div>
+        <div id="vista-filtro-cp" class="d-none px-3 py-3">
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="chk-con-cp" />
+            <label class="form-check-label" for="chk-con-cp">Con Código Postal</label>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="chk-sin-cp" />
+            <label class="form-check-label" for="chk-sin-cp">Sin Código Postal</label>
           </div>
         </div>
       </div>
@@ -140,10 +182,27 @@
         var panelEl = document.getElementById("panel-filtros");
         var panel = new bootstrap.Offcanvas(panelEl);
         var vistaLista = document.getElementById("vista-filtros-lista");
-        var vistaStock = document.getElementById("vista-filtro-stock");
         var tituloPanel = document.getElementById("titulo-panel-filtros");
         var chkCon = document.getElementById("chk-con-stock");
         var chkSin = document.getElementById("chk-sin-stock");
+        var chkConReno = document.getElementById("chk-con-renovacion");
+        var chkSinReno = document.getElementById("chk-sin-renovacion");
+        var selRenoNum = document.getElementById("sel-renovacion-num");
+        var chkConCp = document.getElementById("chk-con-cp");
+        var chkSinCp = document.getElementById("chk-sin-cp");
+
+        /* Sub-vistas del panel: "" = lista de filtros */
+        var vistas = {
+          stock: document.getElementById("vista-filtro-stock"),
+          renovacion: document.getElementById("vista-filtro-renovacion"),
+          cp: document.getElementById("vista-filtro-cp"),
+        };
+        var titulosVista = {
+          stock: "Stock Estado",
+          renovacion: "Renovación",
+          cp: "CP",
+        };
+        var vistaActual = "";
 
         function pintar(opts) {
           opts = opts || {};
@@ -165,39 +224,78 @@
         }
 
         function pintar_chips() {
+          var lista_chips = [
+            { filtro: "stock", texto: texto_chip_stock() },
+            { filtro: "renovacion", texto: texto_chip_renovacion() },
+            { filtro: "cp", texto: texto_chip_cp() },
+          ];
           var html = "";
-          var chipStock = texto_chip_stock();
-          if (chipStock) {
+          for (var i = 0; i < lista_chips.length; i++) {
+            if (!lista_chips[i].texto) continue;
             html +=
               '<span class="chip-filtro">' +
-              chipStock +
-              ' <button type="button" class="btn-cerrar-chip" id="chip-quitar-stock" aria-label="Quitar">&times;</button></span>';
+              lista_chips[i].texto +
+              ' <button type="button" class="btn-cerrar-chip" data-quitar="' +
+              lista_chips[i].filtro +
+              '" aria-label="Quitar">&times;</button></span>';
           }
           chips.innerHTML = html;
-          var btnQuitar = document.getElementById("chip-quitar-stock");
-          if (btnQuitar) {
-            btnQuitar.addEventListener("click", function (ev) {
-              ev.stopPropagation();
-              poner_filtro_stock("");
-              chkCon.checked = false;
-              chkSin.checked = false;
-              pintar({ irArriba: true });
-            });
+        }
+
+        /* ✕ de cualquier chip → quita solo ese filtro */
+        chips.addEventListener("click", function (ev) {
+          var btn = ev.target.closest("[data-quitar]");
+          if (!btn) return;
+          ev.stopPropagation();
+          quitar_filtro(btn.getAttribute("data-quitar"));
+          sincronizar_checks_desde_filtros();
+          pintar({ irArriba: true });
+        });
+
+        function quitar_filtro(nombre) {
+          if (nombre === "stock") poner_filtro_stock("");
+          if (nombre === "renovacion") poner_filtro_renovacion("");
+          if (nombre === "cp") poner_filtro_cp("");
+        }
+
+        /** Casillas y desplegable reflejan el estado de `filtros` */
+        function sincronizar_checks_desde_filtros() {
+          chkCon.checked = filtros.stock === "con";
+          chkSin.checked = filtros.stock === "sin";
+          chkConReno.checked = filtros.renovacion === "con";
+          chkSinReno.checked = filtros.renovacion === "sin";
+          selRenoNum.value = filtros.renovacion_num || "";
+          selRenoNum.disabled = filtros.renovacion !== "con";
+          chkConCp.checked = filtros.cp === "con";
+          chkSinCp.checked = filtros.cp === "sin";
+        }
+
+        /** Rellena el desplegable con los nº de renovación que hay en los datos */
+        function rellenar_opciones_renovacion() {
+          var nums = opciones_renovacion(datos_necesarios().items);
+          var actual = filtros.renovacion_num || "";
+          if (actual && nums.indexOf(actual) === -1) nums.push(actual);
+          var html = '<option value="">Todas</option>';
+          for (var i = 0; i < nums.length; i++) {
+            html +=
+              '<option value="' + escapar(nums[i]) + '">' + escapar(nums[i]) + "</option>";
           }
+          selRenoNum.innerHTML = html;
+        }
+
+        function mostrarVista(nombre) {
+          vistaActual = nombre || "";
+          vistaLista.classList.toggle("d-none", vistaActual !== "");
+          for (var k in vistas) {
+            vistas[k].classList.toggle("d-none", k !== vistaActual);
+          }
+          tituloPanel.textContent = vistaActual ? titulosVista[vistaActual] : "Filter";
+          if (vistaActual === "renovacion") rellenar_opciones_renovacion();
+          sincronizar_checks_desde_filtros();
         }
 
         function mostrarVistaFiltros() {
-          vistaLista.classList.remove("d-none");
-          vistaStock.classList.add("d-none");
-          tituloPanel.textContent = "Filter";
-        }
-
-        function mostrarVistaStock() {
-          vistaLista.classList.add("d-none");
-          vistaStock.classList.remove("d-none");
-          tituloPanel.textContent = "Stock Estado";
-          chkCon.checked = filtros.stock === "con";
-          chkSin.checked = filtros.stock === "sin";
+          mostrarVista("");
         }
 
         async function actualizarDesdeServidor() {
@@ -219,8 +317,7 @@
         /* Restaurar búsqueda/filtros al volver de detalles */
         var scrollGuardado = restaurar_filtros_home();
         inputBuscar.value = filtros.texto || "";
-        chkCon.checked = filtros.stock === "con";
-        chkSin.checked = filtros.stock === "sin";
+        sincronizar_checks_desde_filtros();
 
         /* Carga local rápida: no bloquear con "Cargando..." si hay datos */
         lista.hidden = false;
@@ -245,8 +342,13 @@
           actualizarDesdeServidor();
         });
 
+        /* Espera a que deje de escribir (200 ms) antes de repintar */
+        var timerBuscar = null;
         inputBuscar.addEventListener("input", function () {
-          pintar({ irArriba: true });
+          clearTimeout(timerBuscar);
+          timerBuscar = setTimeout(function () {
+            pintar({ irArriba: true });
+          }, 200);
         });
 
         document.getElementById("btn-abrir-filtros").addEventListener("click", function () {
@@ -255,45 +357,61 @@
         });
 
         document.getElementById("btn-filtro-stock").addEventListener("click", function () {
-          mostrarVistaStock();
+          mostrarVista("stock");
+        });
+        document.getElementById("btn-filtro-renovacion").addEventListener("click", function () {
+          mostrarVista("renovacion");
+        });
+        document.getElementById("btn-filtro-cp").addEventListener("click", function () {
+          mostrarVista("cp");
         });
 
-        chkCon.addEventListener("change", function () {
-          if (chkCon.checked) chkSin.checked = false;
-          sincronizar_filtro_stock_desde_checks();
-          pintar({ irArriba: true });
-        });
-        chkSin.addEventListener("change", function () {
-          if (chkSin.checked) chkCon.checked = false;
-          sincronizar_filtro_stock_desde_checks();
-          pintar({ irArriba: true });
-        });
-
-        function sincronizar_filtro_stock_desde_checks() {
-          if (chkCon.checked) poner_filtro_stock("con");
-          else if (chkSin.checked) poner_filtro_stock("sin");
-          else poner_filtro_stock("");
+        /**
+         * Pareja Con / Sin: marcar una desmarca la otra.
+         * aplicar(valor) recibe "con" | "sin" | "" y se aplica al momento.
+         */
+        function pareja_checks(chkConX, chkSinX, aplicar) {
+          function cambio(marcado, otro) {
+            if (marcado.checked) otro.checked = false;
+            aplicar(chkConX.checked ? "con" : chkSinX.checked ? "sin" : "");
+            sincronizar_checks_desde_filtros();
+            pintar({ irArriba: true });
+          }
+          chkConX.addEventListener("change", function () {
+            cambio(chkConX, chkSinX);
+          });
+          chkSinX.addEventListener("change", function () {
+            cambio(chkSinX, chkConX);
+          });
         }
 
+        pareja_checks(chkCon, chkSin, poner_filtro_stock);
+        pareja_checks(chkConReno, chkSinReno, function (valor) {
+          poner_filtro_renovacion(valor, selRenoNum.value);
+        });
+        pareja_checks(chkConCp, chkSinCp, poner_filtro_cp);
+
+        /* Elegir un nº de renovación marca "Con renovación" */
+        selRenoNum.addEventListener("change", function () {
+          poner_filtro_renovacion("con", selRenoNum.value);
+          sincronizar_checks_desde_filtros();
+          pintar({ irArriba: true });
+        });
+
         document.getElementById("btn-clear-filtros").addEventListener("click", function () {
-          if (!vistaStock.classList.contains("d-none")) {
-            chkCon.checked = false;
-            chkSin.checked = false;
-            poner_filtro_stock("");
+          if (vistaActual) {
+            /* Dentro de un filtro → limpia solo ese */
+            quitar_filtro(vistaActual);
           } else {
             limpiar_filtros();
             inputBuscar.value = "";
-            chkCon.checked = false;
-            chkSin.checked = false;
           }
+          sincronizar_checks_desde_filtros();
           pintar({ irArriba: true });
         });
 
         document.getElementById("btn-done-filtros").addEventListener("click", function () {
-          if (!vistaStock.classList.contains("d-none")) {
-            sincronizar_filtro_stock_desde_checks();
-            mostrarVistaFiltros();
-          }
+          mostrarVistaFiltros();
           pintar({ irArriba: true });
           panel.hide();
         });
