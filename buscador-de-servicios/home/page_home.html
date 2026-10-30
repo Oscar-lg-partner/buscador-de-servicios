@@ -4,331 +4,468 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LG Buscador</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="../../css/main.css" />
+    <link rel="stylesheet" href="../../css/main.css?v=20261030c" />
+    <!-- Tema claro/oscuro: antes de pintar para que no parpadee -->
+    <script src="../../js/tema.js?v=20261030c"></script>
   </head>
-  <body class="app-shell app-home">
-    <header class="app-header">
-      <div class="header-bar">
-        <div class="header-brand">
-          <button class="btn btn-icon" type="button" id="btn-menu" aria-label="Menú">
-            <i class="bi bi-list"></i>
-          </button>
+  <body class="app-home">
+    <header class="barra-sup">
+      <div class="barra-fila">
+        <span class="marca">
           <svg class="lg-logo" viewBox="0 0 48 48" aria-hidden="true">
             <circle cx="24" cy="24" r="24" fill="#a50034" />
-            <text
-              x="24"
-              y="29"
-              text-anchor="middle"
-              fill="#fff"
-              font-size="16"
-              font-family="Arial, sans-serif"
-              font-weight="700"
-            >
-              LG
-            </text>
+            <text x="24" y="29" text-anchor="middle" fill="#fff" font-size="16" font-family="Arial, sans-serif" font-weight="700">LG</text>
           </svg>
-          <span class="header-title">Buscador</span>
+          Buscador
+        </span>
+
+        <div class="busqueda">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <input
+            type="search"
+            id="input-buscar"
+            placeholder="Buscar modelo, servicio, SKU, precio, año o código postal..."
+            aria-label="Buscar"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <kbd title="Atajo: / o Ctrl+K">/</kbd>
         </div>
 
-        <div class="header-tools">
-          <div class="search-wrap">
-            <i class="bi bi-search search-ico"></i>
-            <input
-              type="search"
-              class="form-control search-input"
-              id="input-buscar"
-              placeholder="Buscar modelo, año, precio, servicio..."
-              autocomplete="off"
-            />
-            <button
-              class="btn btn-icon btn-filter"
-              type="button"
-              id="btn-abrir-filtros"
-              title="Filtros"
-            >
-              <i class="bi bi-funnel"></i>
+        <!-- Buscador solo de código postal (además del CP en la búsqueda general) -->
+
+
+        <div class="sesion">
+          <div class="datos-estado">
+            <span class="fecha-datos" id="fecha-datos" hidden></span>
+            <button class="btn" type="button" id="btn-refresh" title="Traer los datos de hoy del Sheet">
+              <i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span class="txt-actualizar">Actualizar</span>
             </button>
           </div>
-          <button
-            class="btn btn-icon btn-refresh"
-            type="button"
-            id="btn-refresh"
-            aria-label="Actualizar"
-            title="Actualizar"
-          >
-            <i class="bi bi-arrow-clockwise"></i>
+          <button class="btn btn-icono btn-texto btn-tema" type="button" data-accion-tema="alternar" aria-label="Cambiar tema"></button>
+          <span class="separador" aria-hidden="true"></span>
+          <span class="usuario-sesion" id="usuario-sesion"></span>
+          <button class="btn btn-texto" type="button" id="btn-salir" aria-label="Salir" title="Cerrar sesión">
+            <i class="bi bi-box-arrow-right" aria-hidden="true"></i><span class="txt-salir">Salir</span>
           </button>
         </div>
-      </div>
-      <div class="header-chips">
-        <div class="chips-filtros d-flex flex-wrap gap-2" id="chips-filtros"></div>
       </div>
     </header>
 
-    <main class="home-main">
-      <div id="estado" class="text-center text-muted py-5" hidden></div>
-      <div id="lista-buscador" class="lista-buscador"></div>
-    </main>
+    <main class="trabajo">
+      <section class="lista-zona" id="lista-zona" aria-label="Resultados">
+        <!-- Cabecera de la lista (fija al desplazar): aviso CP, filtros y columnas.
+             Va solo sobre la lista, no sobre la ficha. -->
+        <div class="lista-cab" id="lista-cab">
+        <!-- Aparece cuando la búsqueda lleva un código postal de 5 cifras -->
+        <div class="aviso-cp" id="aviso-cp" role="status" hidden></div>
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="panel-filtros">
-      <div class="offcanvas-header border-bottom">
-        <h5 class="offcanvas-title" id="titulo-panel-filtros">Filter</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-      </div>
-      <div class="offcanvas-body p-0" id="cuerpo-panel-filtros">
-        <div id="vista-filtros-lista">
-          <button
-            type="button"
-            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 border-bottom rounded-0 px-3 py-3"
-            id="btn-filtro-stock"
-          >
-            Stock Estado
-            <i class="bi bi-chevron-right text-muted"></i>
-          </button>
-          <button
-            type="button"
-            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 border-bottom rounded-0 px-3 py-3"
-            id="btn-filtro-renovacion"
-          >
-            Renovación
-            <i class="bi bi-chevron-right text-muted"></i>
-          </button>
-          <button
-            type="button"
-            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center border-0 border-bottom rounded-0 px-3 py-3"
-            id="btn-filtro-cp"
-          >
-            CP
-            <i class="bi bi-chevron-right text-muted"></i>
-          </button>
-        </div>
-        <div id="vista-filtro-stock" class="d-none px-3 py-3">
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="chk-con-stock" />
-            <label class="form-check-label" for="chk-con-stock">Con Stock</label>
+        <div class="filtros" aria-label="Filtros">
+          <div class="filtro">
+            <span class="filtro-nombre" id="lbl-stock">Stock</span>
+            <div class="segmento" role="radiogroup" aria-labelledby="lbl-stock">
+              <input type="radio" name="f-stock" id="f-stock-todos" value="" checked /><label for="f-stock-todos">Todos</label>
+              <input type="radio" name="f-stock" id="f-stock-con" value="con" /><label for="f-stock-con">Con stock</label>
+              <input type="radio" name="f-stock" id="f-stock-sin" value="sin" /><label for="f-stock-sin">Sin stock</label>
+            </div>
           </div>
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="chk-sin-stock" />
-            <label class="form-check-label" for="chk-sin-stock">Sin Stock</label>
-          </div>
-        </div>
-        <div id="vista-filtro-renovacion" class="d-none px-3 py-3">
-          <div class="form-check mb-2">
-            <input class="form-check-input" type="checkbox" id="chk-con-renovacion" />
-            <label class="form-check-label" for="chk-con-renovacion">Con renovación</label>
-          </div>
-          <div class="mb-3 ps-4">
-            <label class="form-label small text-muted mb-1" for="sel-renovacion-num">Nº de renovación</label>
-            <select class="form-select form-select-sm" id="sel-renovacion-num">
-              <option value="">Todas</option>
+
+          <div class="filtro">
+            <span class="filtro-nombre" id="lbl-reno">Renovación</span>
+            <div class="segmento" role="radiogroup" aria-labelledby="lbl-reno">
+              <input type="radio" name="f-reno" id="f-reno-todas" value="" checked /><label for="f-reno-todas">Todas</label>
+              <input type="radio" name="f-reno" id="f-reno-con" value="con" /><label for="f-reno-con">Con renovación</label>
+              <input type="radio" name="f-reno" id="f-reno-sin" value="sin" /><label for="f-reno-sin">Sin renovación</label>
+            </div>
+            <select class="select-reno" id="sel-renovacion-num" aria-label="Número de renovación" hidden>
+              <option value="">Nº: todos</option>
             </select>
           </div>
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="chk-sin-renovacion" />
-            <label class="form-check-label" for="chk-sin-renovacion">Sin renovación</label>
+
+          <div class="filtro">
+            <span class="filtro-nombre" id="lbl-cp" title="Código postal">CP</span>
+            <div class="segmento" role="radiogroup" aria-labelledby="lbl-cp">
+              <input type="radio" name="f-cp" id="f-cp-todos" value="" checked /><label for="f-cp-todos">Todos</label>
+              <input type="radio" name="f-cp" id="f-cp-con" value="con" /><label for="f-cp-con" title="Con código postal">Con CP</label>
+              <input type="radio" name="f-cp" id="f-cp-sin" value="sin" /><label for="f-cp-sin" title="Sin código postal">Sin CP</label>
+            </div>
+          </div>
+        <div class="busqueda-cp">
+          <i class="bi bi-geo-alt" aria-hidden="true"></i>
+          <input
+            type="text"
+            id="input-cp"
+            inputmode="numeric"
+            maxlength="5"
+            placeholder="Código postal"
+            aria-label="Código postal"
+            autocomplete="off"
+          />
+        </div>
+          <div class="filtros-fin">
+            <span class="contador" id="contador"></span>
+            <button class="btn btn-texto" type="button" id="btn-limpiar" hidden>
+              <i class="bi bi-x-lg" aria-hidden="true"></i> Limpiar
+            </button>
           </div>
         </div>
-        <div id="vista-filtro-cp" class="d-none px-3 py-3">
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="chk-con-cp" />
-            <label class="form-check-label" for="chk-con-cp">Con Código Postal</label>
-          </div>
-          <div class="form-check mb-3">
-            <input class="form-check-input" type="checkbox" id="chk-sin-cp" />
-            <label class="form-check-label" for="chk-sin-cp">Sin Código Postal</label>
+          <div class="cols" aria-hidden="true">
+            <span class="c-modelo">Servicio</span>
+            <span class="c-precio">Precio</span>
+            <span class="c-reno">Renovación</span>
+            <span class="c-fin">Año fin de ofrecimiento</span>
+            <span class="c-anio">Año venta producto</span>
+            <span class="c-stock">Stock</span>
+            <span class="c-cp">CP</span>
+            <span class="c-garantia">Garantía 1 año</span>
           </div>
         </div>
-      </div>
-      <div class="offcanvas-footer border-top d-flex justify-content-between px-3 py-3">
-        <button type="button" class="btn btn-link text-secondary text-decoration-none" id="btn-clear-filtros">
-          CLEAR
-        </button>
-        <button type="button" class="btn btn-link text-decoration-none btn-done-filtro" id="btn-done-filtros">
-          DONE
-        </button>
-      </div>
-    </div>
+        <div class="contador contador-movil" id="contador-movil"></div>
+        <div id="estado" class="estado" hidden></div>
+        <div id="lista-buscador" class="lista"></div>
+      </section>
 
-    <nav class="app-bottom d-flex align-items-center justify-content-center" aria-label="Navegación">
-      <a class="nav-link text-center active" href="#">
-        <i class="bi bi-grid-fill"></i>
-        Buscador
-      </a>
-    </nav>
+      <aside class="ficha-zona" id="ficha-zona" aria-label="Ficha del modelo">
+        <div id="ficha" class="ficha-vacia">
+          <i class="bi bi-card-text" aria-hidden="true"></i>
+          <p>Elige un modelo de la lista para ver su ficha aquí.</p>
+          <p><kbd>↑</kbd> <kbd>↓</kbd> para moverte por la lista</p>
+        </div>
+      </aside>
+    </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../../js/config.js"></script>
-    <script src="../../js/api.js"></script>
-    <script src="../../js/auth.js"></script>
-    <script src="../../js/datos.js"></script>
-    <script src="js/lista_home.js"></script>
-    <script src="js/buscador.js"></script>
+    <script src="../../js/config.js?v=20261030c"></script>
+    <script src="../../js/api.js?v=20261030c"></script>
+    <script src="../../js/auth.js?v=20261030c"></script>
+    <script src="../../js/datos.js?v=20261030c"></script>
+    <script src="../../js/formato.js?v=20261030c"></script>
+    <script src="js/lista_home.js?v=20261030c"></script>
+    <script src="js/buscador.js?v=20261030c"></script>
+    <script src="../detalles/js/lista_detalles.js?v=20261030c"></script>
     <script>
       (async function () {
         if (!exigirSesion()) return;
 
         var estado = document.getElementById("estado");
         var lista = document.getElementById("lista-buscador");
+        var listaZona = document.getElementById("lista-zona");
         var inputBuscar = document.getElementById("input-buscar");
-        var chips = document.getElementById("chips-filtros");
-        var panelEl = document.getElementById("panel-filtros");
-        var panel = new bootstrap.Offcanvas(panelEl);
-        var vistaLista = document.getElementById("vista-filtros-lista");
-        var tituloPanel = document.getElementById("titulo-panel-filtros");
-        var chkCon = document.getElementById("chk-con-stock");
-        var chkSin = document.getElementById("chk-sin-stock");
-        var chkConReno = document.getElementById("chk-con-renovacion");
-        var chkSinReno = document.getElementById("chk-sin-renovacion");
+        var inputCp = document.getElementById("input-cp");
+        var contador = document.getElementById("contador");
+        var contadorMovil = document.getElementById("contador-movil");
+        var btnLimpiar = document.getElementById("btn-limpiar");
         var selRenoNum = document.getElementById("sel-renovacion-num");
-        var chkConCp = document.getElementById("chk-con-cp");
-        var chkSinCp = document.getElementById("chk-sin-cp");
+        var fichaZona = document.getElementById("ficha-zona");
+        var fichaEl = document.getElementById("ficha");
 
-        /* Sub-vistas del panel: "" = lista de filtros */
-        var vistas = {
-          stock: document.getElementById("vista-filtro-stock"),
-          renovacion: document.getElementById("vista-filtro-renovacion"),
-          cp: document.getElementById("vista-filtro-cp"),
-        };
-        var titulosVista = {
-          stock: "Stock Estado",
-          renovacion: "Renovación",
-          cp: "CP",
-        };
-        var vistaActual = "";
+        /* PC ancho: la ficha se abre al lado; si no, en su página */
+        var vistaPanel = window.matchMedia("(min-width: 1200px)");
+        var seleccion = { tech: null, pos: 0 };
+        var bolsaFicha = null;
+
+        /* Alturas para lo que va fijo arriba (cambian con el aviso CP o al bajar filtros de línea) */
+        var barraSup = document.querySelector(".barra-sup");
+        var listaCab = document.getElementById("lista-cab");
+        function medir_cabeceras() {
+          document.body.style.setProperty("--barra-h", barraSup.offsetHeight + "px");
+          document.body.style.setProperty("--cab-h", listaCab.offsetHeight + "px");
+        }
+        if (window.ResizeObserver) {
+          var ro = new ResizeObserver(medir_cabeceras);
+          ro.observe(barraSup);
+          ro.observe(listaCab);
+        }
+        medir_cabeceras();
+
+        /* ================= PINTAR ================= */
 
         function pintar(opts) {
           opts = opts || {};
           poner_texto_busqueda(inputBuscar.value);
-          listar_datos_home();
-          pintar_chips();
-          ajustar_altura_header();
+          var n = listar_datos_home();
+          var txt = "<strong>" + n + "</strong> " + (n === 1 ? "resultado" : "resultados");
+          contador.innerHTML = txt;
+          contadorMovil.innerHTML = txt;
+          btnLimpiar.hidden = !hay_filtros_activos();
+          pintar_aviso_cp();
+          marcar_seleccion();
+          pintar_fecha_datos();
           guardar_filtros_home();
           if (opts.irArriba) {
+            listaZona.scrollTop = 0;
             window.scrollTo(0, 0);
           }
         }
 
-        function ajustar_altura_header() {
-          var header = document.querySelector(".app-header");
-          if (!header) return;
-          var h = Math.ceil(header.getBoundingClientRect().height);
-          document.body.style.setProperty("--header-h", h + "px");
-        }
-
-        function pintar_chips() {
-          var lista_chips = [
-            { filtro: "stock", texto: texto_chip_stock() },
-            { filtro: "renovacion", texto: texto_chip_renovacion() },
-            { filtro: "cp", texto: texto_chip_cp() },
-          ];
-          var html = "";
-          for (var i = 0; i < lista_chips.length; i++) {
-            if (!lista_chips[i].texto) continue;
-            html +=
-              '<span class="chip-filtro">' +
-              lista_chips[i].texto +
-              ' <button type="button" class="btn-cerrar-chip" data-quitar="' +
-              lista_chips[i].filtro +
-              '" aria-label="Quitar">&times;</button></span>';
+        /**
+         * "Datos de hoy, 09:12" / "Datos del 15/10, 09:12".
+         * El stock del Sheet se actualiza cada día a las 6:00:
+         * si los datos se bajaron antes de la última actualización → ámbar.
+         */
+        function pintar_fecha_datos() {
+          var el = document.getElementById("fecha-datos");
+          var ts = leerFechaDatos();
+          if (!ts) {
+            el.hidden = true;
+            return;
           }
-          chips.innerHTML = html;
+          var fecha = new Date(ts);
+          var ahora = new Date();
+          var dos = function (n) {
+            return (n < 10 ? "0" : "") + n;
+          };
+          var hora = dos(fecha.getHours()) + ":" + dos(fecha.getMinutes());
+          var esHoy = fecha.toDateString() === ahora.toDateString();
+
+          var ultimaActualizacion = new Date(ahora);
+          ultimaActualizacion.setHours(6, 0, 0, 0);
+          if (ahora < ultimaActualizacion) {
+            ultimaActualizacion.setDate(ultimaActualizacion.getDate() - 1);
+          }
+          var antiguos = fecha < ultimaActualizacion;
+
+          el.hidden = false;
+          el.classList.toggle("fecha-datos-antiguos", antiguos);
+          el.innerHTML =
+            (antiguos ? '<i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i> ' : "") +
+            /* En móvil se oculta "Datos de" para que quepa */
+            (esHoy
+              ? '<span class="fecha-pre">Datos de </span>hoy, ' + hora
+              : '<span class="fecha-pre">Datos del </span>' +
+                dos(fecha.getDate()) + "/" + dos(fecha.getMonth() + 1) + ", " + hora);
+          el.title = antiguos
+            ? "Hay datos más nuevos en el Sheet (se actualizan a las 6:00). Pulsa Actualizar."
+            : "Datos descargados del Sheet";
         }
 
-        /* ✕ de cualquier chip → quita solo ese filtro */
-        chips.addEventListener("click", function (ev) {
-          var btn = ev.target.closest("[data-quitar]");
-          if (!btn) return;
-          ev.stopPropagation();
-          quitar_filtro(btn.getAttribute("data-quitar"));
-          sincronizar_checks_desde_filtros();
-          pintar({ irArriba: true });
-        });
+        /* Si la página se queda abierta, revisa la fecha cada 5 min */
+        setInterval(pintar_fecha_datos, 5 * 60 * 1000);
 
-        function quitar_filtro(nombre) {
-          if (nombre === "stock") poner_filtro_stock("");
-          if (nombre === "renovacion") poner_filtro_renovacion("");
-          if (nombre === "cp") poner_filtro_cp("");
+        /**
+         * Una línea por cada CP buscado (campo Código postal y/o búsqueda general):
+         * "Código postal 01009: 45 SKU en CP Tarifas, 38 servicios en el buscador"
+         */
+        function pintar_aviso_cp() {
+          var el = document.getElementById("aviso-cp");
+          var infos = info_cp_busqueda(datos_necesarios());
+          if (!infos.length) {
+            el.hidden = true;
+            el.innerHTML = "";
+            return;
+          }
+          var html = "";
+          for (var i = 0; i < infos.length; i++) {
+            var info = infos[i];
+            html += info.existe
+              ? '<div class="aviso-linea"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i><span>Código postal <strong>' +
+                info.cp +
+                "</strong>: " +
+                info.total_skus +
+                " SKU en CP Tarifas, " +
+                info.servicios +
+                (info.servicios === 1 ? " servicio" : " servicios") +
+                " en el buscador</span></div>"
+              : '<div class="aviso-linea aviso-linea-no"><i class="bi bi-exclamation-circle" aria-hidden="true"></i><span>El código postal <strong>' +
+                info.cp +
+                "</strong> no está en CP Tarifas." +
+                (info.desde === "texto" ? " Se busca como texto." : "") +
+                "</span></div>";
+          }
+          el.hidden = false;
+          el.innerHTML = html;
         }
 
-        /** Casillas y desplegable reflejan el estado de `filtros` */
-        function sincronizar_checks_desde_filtros() {
-          chkCon.checked = filtros.stock === "con";
-          chkSin.checked = filtros.stock === "sin";
-          chkConReno.checked = filtros.renovacion === "con";
-          chkSinReno.checked = filtros.renovacion === "sin";
+        function mostrar_estado(html) {
+          estado.innerHTML = html;
+          estado.hidden = false;
+          lista.hidden = true;
+        }
+
+        function ocultar_estado() {
+          estado.hidden = true;
+          lista.hidden = false;
+        }
+
+        /* ================= FILTROS ================= */
+
+        /** Radios y desplegable reflejan el estado de `filtros` */
+        function sincronizar_controles() {
+          marcar_radio("f-stock", filtros.stock);
+          marcar_radio("f-reno", filtros.renovacion);
+          marcar_radio("f-cp", filtros.cp);
+          selRenoNum.hidden = filtros.renovacion !== "con";
           selRenoNum.value = filtros.renovacion_num || "";
-          selRenoNum.disabled = filtros.renovacion !== "con";
-          chkConCp.checked = filtros.cp === "con";
-          chkSinCp.checked = filtros.cp === "sin";
         }
 
-        /** Rellena el desplegable con los nº de renovación que hay en los datos */
+        function marcar_radio(nombre, valor) {
+          var radios = document.getElementsByName(nombre);
+          for (var i = 0; i < radios.length; i++) {
+            radios[i].checked = radios[i].value === (valor || "");
+          }
+        }
+
+        /** Nº de renovación que existen en los datos */
         function rellenar_opciones_renovacion() {
           var nums = opciones_renovacion(datos_necesarios().items);
           var actual = filtros.renovacion_num || "";
           if (actual && nums.indexOf(actual) === -1) nums.push(actual);
-          var html = '<option value="">Todas</option>';
+          var html = '<option value="">Nº: todos</option>';
           for (var i = 0; i < nums.length; i++) {
-            html +=
-              '<option value="' + escapar(nums[i]) + '">' + escapar(nums[i]) + "</option>";
+            html += '<option value="' + escapar(nums[i]) + '">Nº ' + escapar(nums[i]) + "</option>";
           }
           selRenoNum.innerHTML = html;
+          selRenoNum.value = actual;
         }
 
-        function mostrarVista(nombre) {
-          vistaActual = nombre || "";
-          vistaLista.classList.toggle("d-none", vistaActual !== "");
-          for (var k in vistas) {
-            vistas[k].classList.toggle("d-none", k !== vistaActual);
+        document.querySelector(".filtros").addEventListener("change", function (ev) {
+          var t = ev.target;
+          if (t.name === "f-stock") poner_filtro_stock(t.value);
+          else if (t.name === "f-reno") poner_filtro_renovacion(t.value, "");
+          else if (t.name === "f-cp") poner_filtro_cp(t.value);
+          else if (t === selRenoNum) poner_filtro_renovacion("con", selRenoNum.value);
+          else return;
+          sincronizar_controles();
+          pintar({ irArriba: true });
+        });
+
+        function limpiar_todo() {
+          limpiar_filtros();
+          inputBuscar.value = "";
+          inputCp.value = "";
+          sincronizar_controles();
+          pintar({ irArriba: true });
+          inputBuscar.focus();
+        }
+
+        btnLimpiar.addEventListener("click", limpiar_todo);
+
+        /* ================= FICHA ================= */
+
+        function abrir(fila) {
+          var tech = fila.getAttribute("data-tech") || "";
+          var pos = Number(fila.getAttribute("data-pos") || 0);
+          if (!tech) return;
+          if (vistaPanel.matches) {
+            seleccionar(tech, pos);
+            return;
           }
-          tituloPanel.textContent = vistaActual ? titulosVista[vistaActual] : "Filter";
-          if (vistaActual === "renovacion") rellenar_opciones_renovacion();
-          sincronizar_checks_desde_filtros();
+          guardar_filtros_home();
+          window.location.href =
+            APP_CONFIG.routes.detalles +
+            "?modelo=" +
+            encodeURIComponent(tech) +
+            "&pos=" +
+            encodeURIComponent(pos);
         }
 
-        function mostrarVistaFiltros() {
-          mostrarVista("");
+        function seleccionar(tech, pos) {
+          if (!bolsaFicha || seleccion.tech !== tech) {
+            bolsaFicha = crear_bolsa_detalle(tech);
+          }
+          if (pos < 0) pos = 0;
+          if (pos >= bolsaFicha.total_datos) pos = Math.max(0, bolsaFicha.total_datos - 1);
+          seleccion.tech = tech;
+          seleccion.pos = pos;
+          fichaEl.className = "ficha";
+          pintar_detalle(bolsaFicha, pos, fichaEl);
+          fichaZona.scrollTop = 0;
+          marcar_seleccion();
         }
+
+        function marcar_seleccion() {
+          var filas = lista.querySelectorAll(".fila");
+          for (var i = 0; i < filas.length; i++) {
+            var sel =
+              vistaPanel.matches &&
+              filas[i].getAttribute("data-tech") === seleccion.tech &&
+              Number(filas[i].getAttribute("data-pos")) === seleccion.pos;
+            filas[i].setAttribute("aria-selected", sel ? "true" : "false");
+          }
+        }
+
+        /* Anterior / siguiente dentro de la ficha */
+        activar_ficha_det(fichaEl, function (paso) {
+          if (seleccion.tech) seleccionar(seleccion.tech, seleccion.pos + paso);
+        });
+
+        /* ================= DATOS ================= */
 
         async function actualizarDesdeServidor() {
-          estado.hidden = false;
-          lista.hidden = true;
-          estado.textContent = "Actualizando desde el Sheet...";
-
+          mostrar_estado('<p class="estado-titulo">Trayendo los datos de hoy del Sheet…</p><p>Puede tardar unos segundos.</p>');
           try {
             await traerYGuardarDatos();
+            ocultar_estado();
+            rellenar_opciones_renovacion();
+            sincronizar_controles();
             pintar({ irArriba: true });
-            estado.hidden = true;
-            lista.hidden = false;
+            if (seleccion.tech) {
+              bolsaFicha = null;
+              seleccionar(seleccion.tech, seleccion.pos);
+            }
           } catch (err) {
             console.error(err);
-            estado.textContent = err.message || "No se pudo actualizar.";
+            mostrar_estado(
+              '<p class="estado-titulo">No se pudieron traer los datos</p><p>' +
+                escapar(err.message || "Error de conexión con el Sheet.") +
+                '</p><button type="button" class="btn" data-accion="actualizar">Reintentar</button>'
+            );
           }
         }
+
+        document.getElementById("btn-refresh").addEventListener("click", actualizarDesdeServidor);
+
+        /* Botones dentro de los estados vacíos / error */
+        listaZona.addEventListener("click", function (ev) {
+          var acc = ev.target.closest("[data-accion]");
+          if (acc) {
+            if (acc.getAttribute("data-accion") === "limpiar") limpiar_todo();
+            if (acc.getAttribute("data-accion") === "actualizar") actualizarDesdeServidor();
+            return;
+          }
+          var fila = ev.target.closest(".fila");
+          if (fila) abrir(fila);
+        });
+
+        /* ================= SESIÓN ================= */
+
+        document.getElementById("usuario-sesion").textContent = obtenerUsuarioSesion();
+
+        document.getElementById("btn-salir").addEventListener("click", async function () {
+          if (confirm("¿Cerrar sesión?")) {
+            borrar_filtros_home_guardados();
+            await cerrarSesion();
+            window.location.href = APP_CONFIG.routes.login;
+          }
+        });
+
+        /* ================= ARRANQUE ================= */
 
         /* Restaurar búsqueda/filtros al volver de detalles */
         var scrollGuardado = restaurar_filtros_home();
         inputBuscar.value = filtros.texto || "";
-        sincronizar_checks_desde_filtros();
+        inputCp.value = filtros.cp_buscado || "";
 
-        /* Carga local rápida: no bloquear con "Cargando..." si hay datos */
-        lista.hidden = false;
-        estado.hidden = true;
         await cargarDatosEnMemoria();
+        rellenar_opciones_renovacion();
+        sincronizar_controles();
 
         if (!hayDatosGuardados()) {
-          estado.hidden = false;
-          lista.hidden = true;
-          estado.textContent =
-            "No hay datos. Pulsa actualizar o vuelve a entrar.";
+          mostrar_estado(
+            '<p class="estado-titulo">Aún no hay datos en este navegador</p>' +
+              "<p>Tráelos del Sheet para empezar a buscar.</p>" +
+              '<button type="button" class="btn btn-principal" data-accion="actualizar">Traer datos</button>'
+          );
+          pintar_fecha_datos();
         } else {
           pintar({ irArriba: false });
           if (scrollGuardado > 0) {
@@ -338,8 +475,22 @@
           }
         }
 
-        document.getElementById("btn-refresh").addEventListener("click", function () {
-          actualizarDesdeServidor();
+        /* Campo Código postal: solo cifras; filtra al llegar a 5 (o al borrarlo) */
+        inputCp.addEventListener("input", function () {
+          var antes = cp_buscado_completo();
+          poner_cp_buscado(inputCp.value);
+          if (inputCp.value !== filtros.cp_buscado) inputCp.value = filtros.cp_buscado;
+          if (cp_buscado_completo() !== antes) pintar({ irArriba: true });
+          else btnLimpiar.hidden = !hay_filtros_activos();
+        });
+
+        inputCp.addEventListener("keydown", function (ev) {
+          if (ev.key === "Escape") {
+            ev.preventDefault();
+            inputCp.value = "";
+            poner_cp_buscado("");
+            pintar({ irArriba: true });
+          }
         });
 
         /* Espera a que deje de escribir (200 ms) antes de repintar */
@@ -351,94 +502,86 @@
           }, 200);
         });
 
-        document.getElementById("btn-abrir-filtros").addEventListener("click", function () {
-          mostrarVistaFiltros();
-          panel.show();
-        });
-
-        document.getElementById("btn-filtro-stock").addEventListener("click", function () {
-          mostrarVista("stock");
-        });
-        document.getElementById("btn-filtro-renovacion").addEventListener("click", function () {
-          mostrarVista("renovacion");
-        });
-        document.getElementById("btn-filtro-cp").addEventListener("click", function () {
-          mostrarVista("cp");
-        });
-
-        /**
-         * Pareja Con / Sin: marcar una desmarca la otra.
-         * aplicar(valor) recibe "con" | "sin" | "" y se aplica al momento.
+        /* =================== TECLADO ===================
+         *  / o Ctrl+K → ir a la búsqueda
+         *  Esc        → limpiar búsqueda (o volver a ella desde la lista)
+         *  ↑ / ↓      → moverse por la lista (en PC ancho, la ficha sigue)
+         *  Enter      → abrir la ficha
          */
-        function pareja_checks(chkConX, chkSinX, aplicar) {
-          function cambio(marcado, otro) {
-            if (marcado.checked) otro.checked = false;
-            aplicar(chkConX.checked ? "con" : chkSinX.checked ? "sin" : "");
-            sincronizar_checks_desde_filtros();
-            pintar({ irArriba: true });
-          }
-          chkConX.addEventListener("change", function () {
-            cambio(chkConX, chkSinX);
-          });
-          chkSinX.addEventListener("change", function () {
-            cambio(chkSinX, chkConX);
-          });
+        function filas() {
+          return Array.prototype.slice.call(lista.querySelectorAll(".fila"));
         }
 
-        pareja_checks(chkCon, chkSin, poner_filtro_stock);
-        pareja_checks(chkConReno, chkSinReno, function (valor) {
-          poner_filtro_renovacion(valor, selRenoNum.value);
-        });
-        pareja_checks(chkConCp, chkSinCp, poner_filtro_cp);
+        function enfocar_busqueda() {
+          inputBuscar.focus();
+          inputBuscar.select();
+        }
 
-        /* Elegir un nº de renovación marca "Con renovación" */
-        selRenoNum.addEventListener("change", function () {
-          poner_filtro_renovacion("con", selRenoNum.value);
-          sincronizar_checks_desde_filtros();
-          pintar({ irArriba: true });
-        });
+        function enfocar_fila(fila) {
+          if (!fila) return;
+          fila.focus({ preventScroll: true });
+          fila.scrollIntoView({ block: "nearest" });
+          if (vistaPanel.matches) abrir(fila);
+        }
 
-        document.getElementById("btn-clear-filtros").addEventListener("click", function () {
-          if (vistaActual) {
-            /* Dentro de un filtro → limpia solo ese */
-            quitar_filtro(vistaActual);
-          } else {
-            limpiar_filtros();
-            inputBuscar.value = "";
+        /* En PC el cursor ya está en la búsqueda (en móvil no, para no abrir el teclado) */
+        if (window.matchMedia("(hover: hover) and (pointer: fine)").matches && !scrollGuardado) {
+          inputBuscar.focus();
+        }
+
+        document.addEventListener("keydown", function (ev) {
+          var t = ev.target;
+          var escribiendo = t && (t.tagName === "INPUT" || t.tagName === "SELECT" || t.tagName === "TEXTAREA");
+
+          if ((ev.ctrlKey || ev.metaKey) && (ev.key === "k" || ev.key === "K")) {
+            ev.preventDefault();
+            enfocar_busqueda();
+            return;
           }
-          sincronizar_checks_desde_filtros();
-          pintar({ irArriba: true });
-        });
-
-        document.getElementById("btn-done-filtros").addEventListener("click", function () {
-          mostrarVistaFiltros();
-          pintar({ irArriba: true });
-          panel.hide();
-        });
-
-        document.getElementById("btn-menu").addEventListener("click", async function () {
-          if (confirm("¿Cerrar sesión?")) {
-            borrar_filtros_home_guardados();
-            await cerrarSesion();
-            window.location.href = APP_CONFIG.routes.login;
+          if (ev.key === "/" && !escribiendo) {
+            ev.preventDefault();
+            enfocar_busqueda();
+            return;
           }
-        });
 
-        /* Un solo clic en la tarjeta → detalles */
-        lista.addEventListener("click", function (ev) {
-          var art = ev.target.closest("article.item-modelo");
-          if (!art) return;
-          var tech = art.getAttribute("data-tech") || "";
-          var pos = art.getAttribute("data-pos") || "0";
-          if (!tech) return;
-          poner_texto_busqueda(inputBuscar.value);
-          guardar_filtros_home();
-          window.location.href =
-            APP_CONFIG.routes.detalles +
-            "?modelo=" +
-            encodeURIComponent(tech) +
-            "&pos=" +
-            encodeURIComponent(pos);
+          if (t === inputBuscar) {
+            if (ev.key === "Escape") {
+              ev.preventDefault();
+              clearTimeout(timerBuscar);
+              inputBuscar.value = "";
+              pintar({ irArriba: true });
+            } else if (ev.key === "ArrowDown") {
+              ev.preventDefault();
+              clearTimeout(timerBuscar);
+              pintar();
+              enfocar_fila(filas()[0]);
+            } else if (ev.key === "Enter") {
+              /* Aplicar ya, sin esperar los 200 ms */
+              clearTimeout(timerBuscar);
+              pintar({ irArriba: true });
+            }
+            return;
+          }
+
+          var fila = t && t.closest ? t.closest(".fila") : null;
+          if (!fila) return;
+          var todas = filas();
+          var i = todas.indexOf(fila);
+
+          if (ev.key === "ArrowDown") {
+            ev.preventDefault();
+            enfocar_fila(todas[i + 1]);
+          } else if (ev.key === "ArrowUp") {
+            ev.preventDefault();
+            if (i <= 0) enfocar_busqueda();
+            else enfocar_fila(todas[i - 1]);
+          } else if (ev.key === "Enter") {
+            ev.preventDefault();
+            abrir(fila);
+          } else if (ev.key === "Escape") {
+            ev.preventDefault();
+            enfocar_busqueda();
+          }
         });
       })();
     </script>

@@ -14,6 +14,8 @@ var DB_CLAVE = "all";
 /** Copia en memoria para leer rápido sin async en la lista */
 var datosEnMemoria = null;
 var cpTarifasEnMemoria = null;
+/** Momento (ms) en que se descargaron los datos del Sheet */
+var fechaDatosEnMemoria = null;
 
 function abrirDB() {
   return new Promise(function (resolve, reject) {
@@ -52,13 +54,15 @@ async function traerYGuardarDatos() {
   var items = data.items || [];
   var cpTarifas = data.cpTarifas || [];
   await borrarDatosGuardados();
-  await guardarDatos(items, cpTarifas);
+  var ts = Date.now();
+  await guardarDatos(items, cpTarifas, ts);
   datosEnMemoria = items;
   cpTarifasEnMemoria = cpTarifas;
+  fechaDatosEnMemoria = ts;
   return items;
 }
 
-async function guardarDatos(items, cpTarifas) {
+async function guardarDatos(items, cpTarifas, ts) {
   var db = await abrirDB();
   return new Promise(function (resolve, reject) {
     var tx = db.transaction(DB_STORE, "readwrite");
@@ -66,7 +70,7 @@ async function guardarDatos(items, cpTarifas) {
       {
         items: items || [],
         cpTarifas: cpTarifas || [],
-        ts: Date.now(),
+        ts: ts || Date.now(),
       },
       DB_CLAVE
     );
@@ -85,6 +89,7 @@ async function guardarDatos(items, cpTarifas) {
 async function borrarDatosGuardados() {
   datosEnMemoria = null;
   cpTarifasEnMemoria = null;
+  fechaDatosEnMemoria = null;
   try {
     var db = await abrirDB();
     await new Promise(function (resolve, reject) {
@@ -130,6 +135,7 @@ async function cargarDatosEnMemoria() {
     guardado && guardado.items ? guardado.items : [];
   cpTarifasEnMemoria =
     guardado && guardado.cpTarifas ? guardado.cpTarifas : [];
+  fechaDatosEnMemoria = guardado && guardado.ts ? guardado.ts : null;
   return datosEnMemoria;
 }
 
@@ -141,6 +147,11 @@ function leerDatos() {
 /** Filas de CP Tarifas guardadas (Tarifa 1 + SKU) */
 function leerCpTarifas() {
   return cpTarifasEnMemoria || [];
+}
+
+/** ms de la descarga (o null si no se sabe) */
+function leerFechaDatos() {
+  return fechaDatosEnMemoria;
 }
 
 function hayDatosGuardados() {

@@ -34,14 +34,13 @@ function crear_bolsa_detalle(techKey) {
       precio: campo_det_precio(fila),
       periodo: campo_det_periodo(fila),
       stock_estado: campo_det_stock_estado(fila),
-      rango_prefijo: campo_det_rango_prefijo(fila),
+      con_stock: tiene_stock_det(fila["Stock"]),
+      stock_unidades: campo_det_stock_unidades(fila),
       con_renove: campo_det_con_renove(fila),
       sku_garantia: campo_det_sku_garantia(fila),
       precio_garantia: campo_det_precio_garantia(fila),
       anio: campo_det_anio(fila),
-      anios_transcurridos: campo_det_anios_transcurridos(fila),
       renovaciones: campo_det_renovaciones(fila),
-      gama: campo_det_gama(fila),
     });
   }
 
@@ -119,10 +118,10 @@ function campo_det_stock_estado(fila) {
   return escapar_det("Sin Stock");
 }
 
-function campo_det_rango_prefijo(fila) {
-  /* Si Modelo Renove está LLENA → no mostrar Rango Prefijo */
-  if (campo_det_con_renove(fila)) return "";
-  return valor_escapado(fila, ["Rango Prefijo"]);
+/** Unidades de stock (solo si hay stock: Stock > 5) */
+function campo_det_stock_unidades(fila) {
+  if (!tiene_stock_det(fila["Stock"])) return "";
+  return valor_escapado(fila, ["Stock"]);
 }
 
 /** true si Modelo Renove está LLENA */
@@ -162,31 +161,30 @@ function campo_det_anio(fila) {
   return valor_escapado(fila, ["Año", "Ano"]);
 }
 
-function campo_det_anios_transcurridos(fila) {
-  if (campo_det_con_renove(fila)) return "";
-  return valor_escapado(fila, ["Años transcurridos", "Anos transcurridos"]);
-}
-
 function campo_det_renovaciones(fila) {
   if (campo_det_con_renove(fila)) return "";
   return valor_escapado(fila, ["Renovaciones"]);
-}
-
-function campo_det_gama(fila) {
-  return valor_escapado(fila, ["Gama"]);
 }
 
 /* =========================================================
  * 3) HTML — solo pinta campos con valor (nada en blanco)
  * ========================================================= */
 
-function pintar_detalle(bolsa, pos) {
-  var caja = document.getElementById("caja-detalle");
+/**
+ * Ficha de una fila. Se usa en la página de detalles y en el panel de home.
+ *  - Arriba: lo que el agente dice en voz alta (servicio, precio, stock, renovación)
+ *  - Debajo: el resto de datos (solo los que tienen valor)
+ * Botones con data-nav="-1|1" (anterior / siguiente) y data-copiar="texto":
+ * la página que la usa escucha esos clics.
+ */
+function pintar_detalle(bolsa, pos, caja) {
+  caja = caja || document.getElementById("caja-detalle");
   if (!caja) return;
 
   if (!bolsa.total_datos) {
     caja.innerHTML =
-      '<p class="text-center text-muted py-4">No hay detalle para este modelo.</p>';
+      '<div class="estado"><p class="estado-titulo">No hay ficha para este modelo</p>' +
+      "<p>Puede que ya no esté en el Sheet. Pulsa Actualizar o vuelve al buscador.</p></div>";
     return;
   }
 
@@ -194,51 +192,149 @@ function pintar_detalle(bolsa, pos) {
   if (pos >= bolsa.total_datos) pos = bolsa.total_datos - 1;
 
   var item = bolsa.items[pos];
+  /* Solo uno de los dos tiene valor (depende de Modelo Renove) */
+  var precio = item.precio_opp || item.precio;
   var html = "";
 
-  html += bloque_det("Modelo", item.modelo);
-  html += bloque_det("Producto", item.producto);
-  /* PVP si existe; Modelo Renove solo en plan renove (≠ 1) */
-  html += bloque_det("PVP Producto", item.pvp);
-  html += bloque_det("Modelo Renove", item.modelo_renove);
-  html += bloque_det("SKU", item.sku);
-  html += bloque_det("Servicio", item.servicio);
-  /* Renove ≠ 1 → Precio (SearchDatabase); si no → Precio OPP cambio nombre Precio OPP/Tarifa Plana Tranquilidad*/
-  html += bloque_det("Precio", item.precio_opp);
-  html += bloque_det("Precio", item.precio);
-  html += bloque_det("Período ofrecimiento (años)", item.periodo);
-  html += bloque_det("Stock Estado", item.stock_estado);
-  /* Rango Prefijo solo si Renove VACÍA (el campo ya viene vacío si está llena) */
-  html += bloque_det("Rango Prefijo", item.rango_prefijo);
+  /* Cabecera: modelo + producto + navegación entre servicios del mismo modelo */
+  html +=
+    '<div class="ficha-cab">' +
+    "<div>" +
+    '<h2 class="ficha-modelo">' +
+    item.modelo +
+    "</h2>" +
+    (item.producto ? '<div class="ficha-producto">' + item.producto + "</div>" : "") +
+    "</div>";
+  if (bolsa.total_datos > 1) {
+    html +=
+      '<div class="ficha-nav">' +
+      '<button type="button" class="btn btn-icono" data-nav="-1" aria-label="Servicio anterior"' +
+      (pos <= 0 ? " disabled" : "") +
+      '><i class="bi bi-chevron-left"></i></button>' +
+      '<span class="ficha-nav-texto"><span class="nav-pre">Servicio </span>' +
+      (pos + 1) +
+      " de " +
+      bolsa.total_datos +
+      "</span>" +
+      '<button type="button" class="btn btn-icono" data-nav="1" aria-label="Servicio siguiente"' +
+      (pos >= bolsa.total_datos - 1 ? " disabled" : "") +
+      '><i class="bi bi-chevron-right"></i></button>' +
+      "</div>";
+  }
+  html += "</div>";
 
+  /* La respuesta */
+  html += '<section class="ficha-respuesta" aria-label="Resumen para el cliente">';
+  if (item.servicio) html += '<div class="ficha-servicio">' + item.servicio + "</div>";
+  html +=
+    '<div class="ficha-precio-fila">' +
+    (precio
+      ? '<span class="ficha-precio">' + precio + "</span>" + boton_copiar_det(precio, "precio")
+      : '<span class="ficha-precio-sin">Sin precio en el Sheet</span>') +
+    "</div>";
+  html += '<div class="ficha-estados">';
+  /* Mismo texto que en la lista: "Con stock (12)" / "Sin stock" */
+  html += item.con_stock
+    ? '<span class="pill pill-ok">Con stock' +
+      (item.stock_unidades ? " (" + item.stock_unidades + ")" : "") +
+      "</span>"
+    : '<span class="pill pill-no">Sin stock</span>';
+  if (item.con_renove) {
+    html += '<span class="ficha-reno">Sin renovación</span>';
+  } else if (item.renovaciones) {
+    html += '<span class="ficha-reno">Renovaciones: <strong>' + item.renovaciones + "</strong></span>";
+  }
+  html += "</div></section>";
+
+  /* Resto de datos, en el mismo orden de siempre */
+  html += '<dl class="ficha-datos">';
+  html += dato_det("SKU", item.sku, { copiar: true });
+  html += dato_det("PVP Producto", item.pvp);
+  html += dato_det("Modelo Renove", item.modelo_renove);
+  html += dato_det("Año fin de ofrecimiento", item.periodo);
   /* Modelo Renove VACÍA → sí mostrar garantía/renovación (si tienen valor) */
   if (!item.con_renove) {
-    html += bloque_det("SKU Garantía", item.sku_garantia);
-    html += bloque_det("Precio 1 año de garantía renovable", item.precio_garantia);
-    html += bloque_det("Año", item.anio);
-    html += bloque_det("Años transcurridos", item.anios_transcurridos);
-    html += bloque_det("Renovaciones", item.renovaciones);
+    html += dato_det("SKU Garantía", item.sku_garantia, { copiar: true });
+    html += dato_det("Precio 1 año de garantía renovable", item.precio_garantia);
+    html += dato_det("Año venta producto", item.anio);
   }
+  html += "</dl>";
 
-  html += bloque_det("Gama", item.gama);
   caja.innerHTML = html;
 }
 
-/** Si no hay valor, no se pinta el bloque (evita labels en blanco) */
-function bloque_det(label, valor) {
+/** Un dato de la ficha; si no hay valor no se pinta (evita etiquetas en blanco) */
+function dato_det(label, valor, opts) {
   if (valor === null || valor === undefined || String(valor).trim() === "") {
     return "";
   }
+  opts = opts || {};
   return (
-    '<div class="detalle-campo">' +
-    '<div class="detalle-label">' +
+    /* Los que se copian (SKU) ocupan todo el ancho para no partirse */
+    '<div class="dato' +
+    (opts.copiar ? " dato-ancho" : "") +
+    '">' +
+    "<dt>" +
     label +
-    "</div>" +
-    '<div class="detalle-valor">' +
+    "</dt>" +
+    "<dd>" +
     valor +
-    "</div>" +
+    (opts.copiar ? boton_copiar_det(valor, label, true) : "") +
+    "</dd>" +
     "</div>"
   );
+}
+
+/**
+ * Botón "Copiar" (el valor llega ya escapado y sirve tal cual en el atributo).
+ * soloIcono: versión compacta para los datos de abajo.
+ */
+function boton_copiar_det(valorEscapado, que, soloIcono) {
+  return (
+    '<button type="button" class="btn-copiar' +
+    (soloIcono ? " btn-copiar-icono" : "") +
+    '" data-copiar="' +
+    valorEscapado +
+    '" aria-label="Copiar ' +
+    que +
+    '" title="Copiar ' +
+    que +
+    '"><i class="bi bi-copy" aria-hidden="true"></i>' +
+    (soloIcono ? "" : "<span>Copiar</span>") +
+    "</button>"
+  );
+}
+
+/**
+ * Escucha en `caja` los botones de la ficha.
+ * onNav(paso) recibe -1 / 1. Copiar funciona solo.
+ */
+function activar_ficha_det(caja, onNav) {
+  caja.addEventListener("click", function (ev) {
+    var nav = ev.target.closest("[data-nav]");
+    if (nav && !nav.disabled) {
+      onNav(Number(nav.getAttribute("data-nav")));
+      return;
+    }
+    var btn = ev.target.closest("[data-copiar]");
+    if (!btn) return;
+    var valor = btn.getAttribute("data-copiar");
+    var listo = function () {
+      var txt = btn.querySelector("span");
+      var ico = btn.querySelector(".bi");
+      btn.classList.add("copiado");
+      if (ico) ico.className = "bi bi-check2";
+      if (txt) txt.textContent = "Copiado";
+      setTimeout(function () {
+        btn.classList.remove("copiado");
+        if (ico) ico.className = "bi bi-copy";
+        if (txt) txt.textContent = "Copiar";
+      }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(valor).then(listo, function () {});
+    }
+  });
 }
 
 /* =========================================================
@@ -250,116 +346,9 @@ function texto_det(v) {
   return String(v).trim();
 }
 
-/**
- * Formato euros:
- *   1.667 / 1.059 (miles mal leídos) → "1.667 €"
- *   39.99 / "39,99"                   → "39,99 €"
- */
+/** Formato euros (js/formato.js) + escape HTML */
 function formato_precio_euros_det(bruto) {
-  if (bruto === null || bruto === undefined || bruto === "") return "";
-  var n = parse_precio_numero_det(bruto);
-  if (isNaN(n)) return escapar_det(texto_det(bruto));
-
-  /* Céntimos reales (1–2 decimales): 39,99 € */
-  if (precio_trae_centimos_det(bruto)) {
-    var fijo = Math.abs(n).toFixed(2).split(".");
-    var parteEntera = fijo[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    var signo = n < 0 ? "-" : "";
-    return escapar_det(signo + parteEntera + "," + fijo[1] + " €");
-  }
-
-  /* Entero + miles con punto */
-  var entero = String(Math.round(n));
-  var conMiles = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return escapar_det(conMiles + " €");
-}
-
-/** true solo si el bruto trae 1–2 decimales (céntimos), no 3 (miles / ruido) */
-function precio_trae_centimos_det(bruto) {
-  var s;
-  if (typeof bruto === "number" && isFinite(bruto)) {
-    if (Math.abs(bruto - Math.round(bruto)) < 1e-9) return false;
-    s = String(bruto);
-    if (/e/i.test(s)) return false;
-  } else {
-    s = String(bruto).trim().replace(/\s/g, "").replace(/€/g, "");
-  }
-  var lastComma = s.lastIndexOf(",");
-  var lastDot = s.lastIndexOf(".");
-  var sepAt = Math.max(lastComma, lastDot);
-  if (sepAt < 0) return false;
-  var cola = s.slice(sepAt + 1).replace(/[^\d]/g, "");
-  return cola.length === 1 || cola.length === 2;
-}
-
-function parse_precio_numero_det(bruto) {
-  if (typeof bruto === "number" && isFinite(bruto)) {
-    if (Math.abs(bruto - Math.round(bruto)) < 1e-9) return Math.round(bruto);
-    /*
-     * Solo X.YYY con |X| < 10 → miles mal leídos (1.667 → 1667).
-     * NUNCA 1667.115 → eso ya es ~1667 €.
-     */
-    var textoNum = String(bruto);
-    if (/e/i.test(textoNum)) {
-      textoNum = bruto.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
-    }
-    var punto = textoNum.indexOf(".");
-    if (punto >= 0) {
-      var dec = textoNum.slice(punto + 1);
-      if (/^\d{3}$/.test(dec) && Math.abs(bruto) < 10) {
-        return Math.round(bruto * 1000);
-      }
-    }
-    return bruto;
-  }
-
-  var s = String(bruto).trim().replace(/\s/g, "").replace(/€/g, "");
-  if (!s) return NaN;
-
-  var lastComma = s.lastIndexOf(",");
-  var lastDot = s.lastIndexOf(".");
-
-  /* Ambos: el último es decimal (1.059,50 o 1,059.50) */
-  if (lastComma >= 0 && lastDot >= 0) {
-    if (lastComma > lastDot) {
-      s = s.replace(/\./g, "").replace(",", ".");
-    } else {
-      s = s.replace(/,/g, "");
-    }
-    return parse_precio_numero_det(Number(s));
-  }
-
-  /* Solo coma o solo punto */
-  if (lastComma >= 0 || lastDot >= 0) {
-    var sep = lastComma >= 0 ? "," : ".";
-    var parts = s.split(sep);
-    var cola = parts[parts.length - 1];
-    var izquierda = parts[0].replace(/[^\d-]/g, "");
-
-    /* 3 dígitos y parte entera corta → miles: 1.667 / 1,059 */
-    if (
-      /^\d{3}$/.test(cola) &&
-      parts.length === 2 &&
-      izquierda.replace("-", "").length <= 3
-    ) {
-      return Number(izquierda + cola);
-    }
-    /* Varios grupos de miles: 1.234.567 */
-    if (/^\d{3}$/.test(cola) && parts.length > 2) {
-      return Number(parts.join(""));
-    }
-    /* 1–2 dígitos → céntimos: 39,99 */
-    if (parts.length === 2 && /^\d{1,2}$/.test(cola)) {
-      return Number(izquierda + "." + cola);
-    }
-    /* 1667.115 → decimal real */
-    if (parts.length === 2 && /^\d+$/.test(cola)) {
-      return Number(izquierda + "." + cola);
-    }
-    return Number(s.replace(/[.,]/g, ""));
-  }
-
-  return Number(s);
+  return escapar_det(formato_precio_euros(bruto));
 }
 
 function tiene_stock_det(valor) {
