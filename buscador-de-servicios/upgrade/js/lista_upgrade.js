@@ -85,7 +85,6 @@ function pintar_upgrade(datos, caja) {
 function html_grupo_upgrade(grupo) {
   var filas = grupo.filas || [];
   var n = filas.length;
-  var unidades = 0;
   var c, r;
 
   var cab = "";
@@ -96,7 +95,6 @@ function html_grupo_upgrade(grupo) {
   var cuerpo = "";
   for (r = 0; r < n; r++) {
     var fila = filas[r];
-    unidades += numero_up(fila[2]);
     cuerpo +=
       "<tr>" +
       '<td class="up-c-grupo">' + campo_up_grupo(fila) + "</td>" +
@@ -110,8 +108,6 @@ function html_grupo_upgrade(grupo) {
     '<section class="up-grupo" aria-label="' + escapar_up(grupo.nombre) + '">' +
     '<header class="up-grupo-cab">' +
     '<h2 class="up-grupo-titulo">' + escapar_up(grupo.nombre) + "</h2>" +
-    '<span class="up-grupo-info"><strong>' + n + "</strong> " + (n === 1 ? "modelo" : "modelos") +
-    " · <strong>" + unidades.toLocaleString("es-ES") + "</strong> uds</span>" +
     "</header>" +
     '<div class="up-tabla-caja"><table class="up-tabla">' +
     "<thead><tr>" + cab + "</tr></thead>" +
