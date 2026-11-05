@@ -22,7 +22,7 @@ Files under `apps-script/*.gs` do **not** run anywhere from this repo: after cha
 ### Front ↔ backend: JSONP, not fetch
 `js/api.js` `apiCall(payload)` injects a `<script>` tag to the Apps Script `/exec` URL with a random `callback` param (avoids CORS on `*.vercel.app`). It retries up to 3 times (Chrome QUIC errors) with a 180 s timeout. Everything is a GET with query params, including the login password.
 
-`apps-script/Conexion.gs` `doGet` dispatches on `action`: `Login` or `sendAllData`, and wraps the JSON in the callback.
+`apps-script/Conexion.gs` `doGet` dispatches on `action`: `Login`, `sendAllData` or `upgradeTool`, and wraps the JSON in the callback.
 
 ### Auth and data flow
 1. `index.html` redirects to `buscador-de-servicios/login/page_login.html`.
@@ -38,6 +38,7 @@ Each page under `buscador-de-servicios/<page>/` loads the shared scripts in orde
 - **home**: `lista_home.js` builds a "bolsa" of display-ready items and renders one `.fila` per item; the same markup is a table row on ≥900px and a card below (CSS grid areas). `buscador.js` applies AND filters: text (every typed word must appear in the item's `texto_busqueda`, built by `campo_texto_busqueda` from only the values visible on the card and normalized by `normalizar_busqueda`; matches are highlighted by `resaltar`), stock (`Stock > 5`), renovación (con + optional nº / sin) and CP. Filters are always-visible radio segments; state persists in `sessionStorage` (`flatfee_filtros_home`). The bolsa is cached in `datos_necesarios()` until `leerDatos()` returns a new array.
   - ≥1200px: clicking/arrowing a row opens the ficha in the right panel (home also loads `../detalles/js/lista_detalles.js`). Narrower: navigates to `page_detalles.html?modelo=<tech>&pos=<n>`.
 - **detalles**: `lista_detalles.js` → `crear_bolsa_detalle(tech)` + `pintar_detalle(bolsa, pos, caja)` render the ficha (answer block with servicio/precio/stock/renovación, then the remaining fields); `activar_ficha_det(caja, onNav)` wires prev/next and copy buttons. Shared by the detalles page and the home panel.
+- **upgrade**: the "Servicio Upgrade" button in the home filter bar opens `upgrade/page_upgrade.html` in a new tab (`window.open` without noopener, so `sessionStorage`/token is copied). It calls action `upgradeTool` (`apps-script/upgradeTool.gs`) on every load (not cached in IndexedDB), which reads sheet `Upgrade tool` **by column position** with `getDisplayValues()`: A, J, K, M are shown, F is the group (QNED, OLED…) and splits the data into one table per group.
 - **Product constraint**: never remove a data field from cards/ficha unless the user asks (Gama, Rango Prefijo and Años transcurridos were removed on request); reordering is fine. Stock in the Sheet refreshes daily at 06:00 (the "Datos de…" badge turns amber when the download predates it).
 
 ### Field-function pattern (lista_home.js / lista_detalles.js)

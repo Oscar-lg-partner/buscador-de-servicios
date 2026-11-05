@@ -10,5 +10,6 @@ const APP_CONFIG = {
     login: "../login/page_login.html",
     home: "../home/page_home.html",
     detalles: "../detalles/page_detalles.html",
+    upgrade: "../upgrade/page_upgrade.html",
   },
 };

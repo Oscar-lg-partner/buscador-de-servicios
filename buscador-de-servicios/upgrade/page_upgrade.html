@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Servicio Upgrade · LG Buscador</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../../css/main.css?v=20261105c" />
+    <!-- Tema claro/oscuro: antes de pintar para que no parpadee -->
+    <script src="../../js/tema.js?v=20261030c"></script>
+  </head>
+  <body class="app-upgrade">
+    <header class="barra-sup">
+      <div class="barra-fila">
+        <span class="marca">
+          <svg class="lg-logo" viewBox="0 0 48 48" aria-hidden="true">
+            <circle cx="24" cy="24" r="24" fill="#a50034" />
+            <text x="24" y="29" text-anchor="middle" fill="#fff" font-size="16" font-family="Arial, sans-serif" font-weight="700">LG</text>
+          </svg>
+          Buscador <span class="up-marca-sub">· Servicio Upgrade</span>
+        </span>
+        <div class="sesion">
+          <button class="btn btn-icono btn-texto btn-tema" type="button" data-accion-tema="alternar" aria-label="Cambiar tema"></button>
+          <button class="btn" type="button" id="btn-refresh-upgrade" title="Volver a traer los datos del Sheet">
+            <i class="bi bi-arrow-clockwise" aria-hidden="true"></i><span class="txt-actualizar">Actualizar</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="up-main" id="up-main">
+      <div class="estado up-cargando" role="status"><span class="up-spinner" aria-hidden="true"></span><p class="estado-titulo">Obteniendo datos…</p></div>
+    </main>
+
+    <script src="../../js/config.js?v=20261105a"></script>
+    <script src="../../js/api.js?v=20261030c"></script>
+    <script src="../../js/auth.js?v=20261030c"></script>
+    <script src="../../js/datos.js?v=20261030c"></script>
+    <script src="../../js/formato.js?v=20261030c"></script>
+    <script src="js/lista_upgrade.js?v=20261105b"></script>
+    <script>
+      (function () {
+        if (!exigirSesion()) return;
+
+        var caja = document.getElementById("up-main");
+        var btn = document.getElementById("btn-refresh-upgrade");
+
+        async function cargar() {
+          btn.disabled = true;
+          caja.innerHTML =
+            '<div class="estado up-cargando" role="status" aria-live="polite">' +
+            '<span class="up-spinner" aria-hidden="true"></span>' +
+            '<p class="estado-titulo">Obteniendo datos…</p></div>';
+          try {
+            var datos = await traer_upgrade();
+            pintar_upgrade(datos, caja);
+          } catch (err) {
+            console.error(err);
+            caja.innerHTML =
+              '<div class="estado"><p class="estado-titulo">No se pudieron traer los datos</p><p>' +
+              escapar_up(err.message || "Error de conexión con el Sheet.") +
+              '</p><button type="button" class="btn" id="btn-reintentar">Reintentar</button></div>';
+            document.getElementById("btn-reintentar").addEventListener("click", cargar);
+          } finally {
+            btn.disabled = false;
+          }
+        }
+
+        btn.addEventListener("click", cargar);
+        cargar();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 /**
  * CONEXIÓN
  * Google necesita doGet para la URL /exec.
- * Solo reenvía a Login o sendAllData.
+ * Solo reenvía a Login, sendAllData o upgradeTool.
  */
 
 function doGet(e) {
@@ -13,6 +13,8 @@ function doGet(e) {
     salida = Login(p.user, p.pass);
   } else if (que === "sendAllData") {
     salida = sendAllData(p.token);
+  } else if (que === "upgradeTool") {
+    salida = upgradeTool(p.token);
   } else {
     salida = { ok: false, error: "Pedido desconocido" };
   }
