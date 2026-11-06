@@ -1572,34 +1572,45 @@ kbd {
 }
 
 /* =========================================================
- * SERVICIO UPGRADE
- * Botón en la barra de filtros + página con un panel por grupo (QNED, OLED…)
- * ========================================================= */
+   BOTÓN SERVICIO UPGRADE
+   Rojo corporativo LG, destacado visualmente
+   ========================================================= */
 
-/* Botón: mismo lenguaje que los segmentos de filtro (neutro, 32 px) */
-.filtros .btn-upgrade {
+.sesion #btn-upgrade {
   flex-shrink: 0;
-  height: 32px;
-  padding: 0 10px;
-  background: var(--canvas);
-  border-color: var(--line);
-  color: var(--ink-2);
-  font-weight: 500;
+  height: 36px;
+  padding: 0 16px;
+  background: #a50034;
+  border: 1px solid #a50034;
+  border-radius: 8px;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(165, 0, 52, 0.25);
+  transition: all 0.2s ease;
 }
 
-.filtros .btn-upgrade .bi {
-  color: var(--ink-3);
-  transition: color 0.15s;
+.sesion #btn-upgrade .bi {
+  color: #ffffff;
+  font-size: 16px;
 }
 
-.filtros .btn-upgrade:hover {
-  background: var(--surface);
-  border-color: var(--ink-3);
-  color: var(--ink);
+.sesion #btn-upgrade:hover {
+  background: #800029;
+  border-color: #800029;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(165, 0, 52, 0.35);
 }
 
-.filtros .btn-upgrade:hover .bi {
-  color: var(--brand);
+.sesion #btn-upgrade:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 /* ---------- Página ---------- */
