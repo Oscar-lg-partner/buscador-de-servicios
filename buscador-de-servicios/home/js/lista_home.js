@@ -238,6 +238,21 @@ function datos_necesarios() {
  * 3) HTML — solo pinta (sin validar)
  * ========================================================= */
 
+/*
+ * Pintar por tandas: la búsqueda y los filtros recorren TODOS los datos (en memoria),
+ * pero en el DOM solo se pintan FILAS_POR_TANDA tarjetas; el resto se añade al
+ * llegar al final de la lista (scroll o botón "Mostrar más").
+ * Así el DOM no crece con el Sheet (miles de filas = decenas de miles de elementos).
+ */
+var FILAS_POR_TANDA = 100;
+
+/* Estado de la lista pintada */
+var lista_pintada = {
+  items: [], // filas filtradas (todas)
+  pintadas: 0, // cuántas hay ya en el DOM
+};
+var observador_lista = null;
+
 function listar_datos_home() {
   var caja = document.getElementById("lista-buscador");
   if (!caja) return;
@@ -249,30 +264,89 @@ function listar_datos_home() {
       ? aplicar_filtros(base.items)
       : base.items;
 
-  var bolsa = {
-    items: itemsFiltrados,
-    total_datos: itemsFiltrados.length,
-  };
+  lista_pintada.items = itemsFiltrados;
+  lista_pintada.pintadas = 0;
 
-  var html = "";
-  var i;
-  var item;
-
-  if (!bolsa.total_datos) {
+  if (!itemsFiltrados.length) {
     caja.innerHTML =
       '<p class="text-center text-muted py-4 mb-0">No hay modelos para mostrar.</p>';
     return;
   }
 
-  html +=
+  /* El número del badge es el total filtrado, aunque no estén todas pintadas */
+  caja.innerHTML =
     '<div class="grupo-header">' +
     '<span class="grupo-nombre">Modelos</span>' +
     '<span class="grupo-badge">' +
-    bolsa.total_datos +
-    "</span></div>";
+    itemsFiltrados.length +
+    "</span></div>" +
+    html_tanda_filas() +
+    html_mas_filas();
+  observar_mas_filas(caja);
+}
 
-  for (i = 0; i < bolsa.total_datos; i++) {
-    item = bolsa.items[i];
+/**
+ * Añade la siguiente tanda al final de la lista.
+ * @returns {number} cuántas filas se han añadido (0 = ya estaban todas)
+ */
+function pintar_mas_filas() {
+  var caja = document.getElementById("lista-buscador");
+  if (!caja || lista_pintada.pintadas >= lista_pintada.items.length) return 0;
+
+  var antes = lista_pintada.pintadas;
+  var mas = caja.querySelector(".lista-mas");
+  if (mas) mas.parentNode.removeChild(mas);
+  caja.insertAdjacentHTML("beforeend", html_tanda_filas() + html_mas_filas());
+  observar_mas_filas(caja);
+  return lista_pintada.pintadas - antes;
+}
+
+/** Al acercarse al final de la lista, pinta la siguiente tanda solo */
+function observar_mas_filas(caja) {
+  if (!window.IntersectionObserver) return; /* sin observer: queda el botón */
+  if (observador_lista) observador_lista.disconnect();
+  var mas = caja.querySelector(".lista-mas");
+  if (!mas) return;
+  observador_lista = new IntersectionObserver(
+    function (entradas) {
+      for (var i = 0; i < entradas.length; i++) {
+        if (entradas[i].isIntersecting) {
+          pintar_mas_filas();
+          return;
+        }
+      }
+    },
+    { rootMargin: "600px 0px" }
+  );
+  observador_lista.observe(mas);
+}
+
+/** Botón al final: "Mostrar 100 más · quedan 3.212" (o nada si ya están todas) */
+function html_mas_filas() {
+  var quedan = lista_pintada.items.length - lista_pintada.pintadas;
+  if (quedan <= 0) return "";
+  var siguiente = Math.min(FILAS_POR_TANDA, quedan);
+  return (
+    '<div class="lista-mas text-center py-3">' +
+    '<button type="button" class="btn btn-outline-secondary btn-sm" data-accion="mas">' +
+    '<i class="bi bi-chevron-down" aria-hidden="true"></i> Mostrar ' +
+    siguiente +
+    " más · quedan " +
+    quedan.toLocaleString("es-ES") +
+    "</button></div>"
+  );
+}
+
+/** HTML de la siguiente tanda de tarjetas (y avanza lista_pintada) */
+function html_tanda_filas() {
+  var items = lista_pintada.items;
+  var fin = Math.min(items.length, lista_pintada.pintadas + FILAS_POR_TANDA);
+  var html = "";
+  var i;
+  var item;
+
+  for (i = lista_pintada.pintadas; i < fin; i++) {
+    item = items[i];
     if (!item.Modelo_Tech_Name) continue;
 
     html +=
@@ -337,7 +411,8 @@ function listar_datos_home() {
       "</article>";
   }
 
-  caja.innerHTML = html;
+  lista_pintada.pintadas = fin;
+  return html;
 }
 
 /* =========================================================
