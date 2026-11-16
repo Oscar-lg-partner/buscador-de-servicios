@@ -169,7 +169,7 @@
     <script src="../../js/api.js"></script>
     <script src="../../js/auth.js"></script>
     <script src="../../js/datos.js"></script>
-    <script src="js/lista_home.js"></script>
+    <script src="js/lista_home.js?v=20261116a"></script>
     <script src="js/buscador.js"></script>
     <script>
       (async function () {
@@ -332,6 +332,11 @@
         } else {
           pintar({ irArriba: false });
           if (scrollGuardado > 0) {
+            /* Al volver de detalles: pintar tandas hasta llegar a donde estaba */
+            while (
+              document.documentElement.scrollHeight < scrollGuardado + window.innerHeight &&
+              pintar_mas_filas()
+            ) {}
             requestAnimationFrame(function () {
               window.scrollTo(0, scrollGuardado);
             });
@@ -426,6 +431,11 @@
 
         /* Un solo clic en la tarjeta → detalles */
         lista.addEventListener("click", function (ev) {
+          /* Botón "Mostrar más" al final de la lista */
+          if (ev.target.closest('[data-accion="mas"]')) {
+            pintar_mas_filas();
+            return;
+          }
           var art = ev.target.closest("article.item-modelo");
           if (!art) return;
           var tech = art.getAttribute("data-tech") || "";
